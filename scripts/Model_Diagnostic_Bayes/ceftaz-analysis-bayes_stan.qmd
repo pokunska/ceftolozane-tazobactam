@@ -225,7 +225,7 @@ ptable
 ```
 
 
-```{r params table greek }
+```{r parameters tables}
 
 pars1 <- c("CLCHat", "QCHat", "V1CHat", "V2CHat",
            "CLTHat", "QTHat", "V1THat", "V2THat",
@@ -1981,7 +1981,7 @@ statistics <- out %>%
   summarise(my = median(MIC90),
             hy = quantile(MIC90, probs = 0.95),
             ly = quantile(MIC90, probs = 0.05))  %>% 
-  mutate(across(where(is.numeric), round, 2))
+  mutate(across(where(is.numeric), ~ round(.x,2)))
 
 statistics
 
@@ -2341,7 +2341,7 @@ pk_sim_1 <- mrgsim_df(mod,
  
 ### Params table
 
-```{r bs2cmt params, eval=F}
+```{r bs2cmt params}
 
 model_dir <- here::here("model/nonmem/basic")
 model_run <- 102

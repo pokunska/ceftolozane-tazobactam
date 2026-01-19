@@ -8,7 +8,7 @@
 
 <meta name="author" content="Paulina Okuńska (okunskapaul@gmail.com)">
 <meta name="author" content="Pawel Wiczling">
-<meta name="dcterms.date" content="2026-01-18">
+<meta name="dcterms.date" content="2026-01-19">
 
 <title>Pharmacokinetics of ceftolozane with tazobactam in critically ill patients - Bayesian approach</title>
 <style>
@@ -166,7 +166,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">January 18, 2026</p>
+      <p class="date">January 19, 2026</p>
     </div>
   </div>
   
@@ -484,7 +484,7 @@ Use `renv::init()` to initialize the project.</code></pre>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="ceftaz-analysis-bayes_stan_files/figure-html/params%20table%20greek-1.png" class="img-fluid figure-img" width="304"></p>
+<p><img src="ceftaz-analysis-bayes_stan_files/figure-html/parameters%20tables-1.png" class="img-fluid figure-img" width="304"></p>
 </figure>
 </div>
 </div>
@@ -523,7 +523,7 @@ Use `renv::init()` to initialize the project.</code></pre>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="ceftaz-analysis-bayes_stan_files/figure-html/params%20table%20greek-2.png" class="img-fluid figure-img" width="304"></p>
+<p><img src="ceftaz-analysis-bayes_stan_files/figure-html/parameters%20tables-2.png" class="img-fluid figure-img" width="304"></p>
 </figure>
 </div>
 </div>
@@ -2609,7 +2609,7 @@ Use `renv::init()` to initialize the project.</code></pre>
   dose                              my    hy    ly
   &lt;chr&gt;                          &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
 1 3g q8h tinf=3h 1CMT BOOTSTRAP   21.9  31.8  16.3
-2 3g q8h tinf=3h 1CMT COVARIANCE  19.7  26.5  13.8
+2 3g q8h tinf=3h 1CMT COVARIANCE  20.1  26.4  13.4
 3 3g q8h tinf=3h 2CMT BAYES       27.0  31.1  21.8</code></pre>
 </div>
 <details class="code-fold">
@@ -2771,7 +2771,7 @@ Use `renv::init()` to initialize the project.</code></pre>
 <span id="cb99-24"><a href="#cb99-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">my =</span> <span class="fu">median</span>(MIC90),</span>
 <span id="cb99-25"><a href="#cb99-25" aria-hidden="true" tabindex="-1"></a>            <span class="at">hy =</span> <span class="fu">quantile</span>(MIC90, <span class="at">probs =</span> <span class="fl">0.95</span>),</span>
 <span id="cb99-26"><a href="#cb99-26" aria-hidden="true" tabindex="-1"></a>            <span class="at">ly =</span> <span class="fu">quantile</span>(MIC90, <span class="at">probs =</span> <span class="fl">0.05</span>))  <span class="sc">%&gt;%</span> </span>
-<span id="cb99-27"><a href="#cb99-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), round, <span class="dv">2</span>))</span>
+<span id="cb99-27"><a href="#cb99-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">round</span>(.x,<span class="dv">2</span>)))</span>
 <span id="cb99-28"><a href="#cb99-28" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb99-29"><a href="#cb99-29" aria-hidden="true" tabindex="-1"></a>statistics</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
@@ -2779,8 +2779,8 @@ Use `renv::init()` to initialize the project.</code></pre>
 <pre><code># A tibble: 3 × 4
   dose                               my    hy    ly
   &lt;chr&gt;                           &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-1 3g q12h tinf=3h 1CMT BOOTSTRAP   19.8  27.2  15.4
-2 3g q12h tinf=3h 1CMT COVARIANCE  17.9  23.0  12.6
+1 3g q12h tinf=3h 1CMT BOOTSTRAP   20.0  27.5  15.2
+2 3g q12h tinf=3h 1CMT COVARIANCE  18.0  23.6  12.6
 3 3g q12h tinf=3h 2CMT BAYES       24.3  27.7  20.2</code></pre>
 </div>
 <details class="code-fold">
@@ -3104,63 +3104,81 @@ Use `renv::init()` to initialize the project.</code></pre>
 <span id="cb110-11"><a href="#cb110-11" aria-hidden="true" tabindex="-1"></a>num_theta8_removed <span class="ot">&lt;-</span> <span class="fu">sum</span>(params_df<span class="sc">$</span>THETA8 <span class="sc">&gt;</span> <span class="dv">2000</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb110-12"><a href="#cb110-12" aria-hidden="true" tabindex="-1"></a>num_theta3_removed <span class="ot">&lt;-</span> <span class="fu">sum</span>(params_df<span class="sc">$</span>THETA3 <span class="sc">&gt;</span> <span class="dv">700</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb110-13"><a href="#cb110-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb110-14"><a href="#cb110-14" aria-hidden="true" tabindex="-1"></a>num_theta8_removed</span>
-<span id="cb110-15"><a href="#cb110-15" aria-hidden="true" tabindex="-1"></a>num_theta3_removed</span>
-<span id="cb110-16"><a href="#cb110-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb110-17"><a href="#cb110-17" aria-hidden="true" tabindex="-1"></a>params_long <span class="ot">&lt;-</span> params_df <span class="sc">%&gt;%</span></span>
-<span id="cb110-18"><a href="#cb110-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">everything</span>(), <span class="at">names_to =</span> <span class="st">"name"</span>, <span class="at">values_to =</span> <span class="st">"Value"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb110-19"><a href="#cb110-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(key, <span class="at">by =</span> <span class="st">"name"</span>) <span class="sc">%&gt;%</span>  </span>
-<span id="cb110-20"><a href="#cb110-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(name <span class="sc">==</span> <span class="st">"THETA8"</span> <span class="sc">&amp;</span> Value <span class="sc">&gt;</span> <span class="dv">2000</span>)) <span class="sc">%&gt;%</span> <span class="do">###remove values &gt;2000 </span></span>
-<span id="cb110-21"><a href="#cb110-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(name <span class="sc">==</span> <span class="st">"THETA3"</span> <span class="sc">&amp;</span> Value <span class="sc">&gt;</span> <span class="dv">700</span>)) <span class="do">###remove values &gt;700 </span></span>
-<span id="cb110-22"><a href="#cb110-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb110-23"><a href="#cb110-23" aria-hidden="true" tabindex="-1"></a>param_df <span class="ot">&lt;-</span> params_long <span class="sc">%&gt;%</span></span>
-<span id="cb110-24"><a href="#cb110-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(name, abb, panel) <span class="sc">%&gt;%</span></span>
-<span id="cb110-25"><a href="#cb110-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb110-26"><a href="#cb110-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean_raw =</span> <span class="fu">mean</span>(Value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb110-27"><a href="#cb110-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">SD_raw =</span> <span class="fu">sd</span>(Value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb110-28"><a href="#cb110-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">Lower_raw =</span> <span class="fu">quantile</span>(Value, <span class="fl">0.025</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb110-29"><a href="#cb110-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">Upper_raw =</span> <span class="fu">quantile</span>(Value, <span class="fl">0.975</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb110-30"><a href="#cb110-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">RSE_raw =</span> SD_raw <span class="sc">/</span> Mean_raw <span class="sc">*</span> <span class="dv">100</span>,</span>
-<span id="cb110-31"><a href="#cb110-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb110-32"><a href="#cb110-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb110-33"><a href="#cb110-33" aria-hidden="true" tabindex="-1"></a>     <span class="at">Mean =</span> <span class="fu">case_when</span>(</span>
-<span id="cb110-34"><a href="#cb110-34" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(Mean_raw, <span class="dv">2</span>),</span>
-<span id="cb110-35"><a href="#cb110-35" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(Mean_raw, <span class="dv">4</span>),</span>
-<span id="cb110-36"><a href="#cb110-36" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(Mean_raw, <span class="dv">3</span>)),</span>
-<span id="cb110-37"><a href="#cb110-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">SD =</span> <span class="fu">case_when</span>(</span>
-<span id="cb110-38"><a href="#cb110-38" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(SD_raw, <span class="dv">2</span>),</span>
-<span id="cb110-39"><a href="#cb110-39" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(SD_raw, <span class="dv">4</span>),</span>
-<span id="cb110-40"><a href="#cb110-40" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(SD_raw, <span class="dv">3</span>)),</span>
-<span id="cb110-41"><a href="#cb110-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">Lower =</span> <span class="fu">case_when</span>(</span>
-<span id="cb110-42"><a href="#cb110-42" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(Lower_raw, <span class="dv">2</span>),</span>
-<span id="cb110-43"><a href="#cb110-43" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(Lower_raw, <span class="dv">4</span>),</span>
-<span id="cb110-44"><a href="#cb110-44" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(Lower_raw, <span class="dv">3</span>)),</span>
-<span id="cb110-45"><a href="#cb110-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">Upper =</span> <span class="fu">case_when</span>(</span>
-<span id="cb110-46"><a href="#cb110-46" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(Upper_raw, <span class="dv">2</span>),</span>
-<span id="cb110-47"><a href="#cb110-47" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(Upper_raw, <span class="dv">4</span>),</span>
-<span id="cb110-48"><a href="#cb110-48" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(Upper_raw, <span class="dv">3</span>)),</span>
-<span id="cb110-49"><a href="#cb110-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">RSE =</span> <span class="fu">case_when</span>(</span>
-<span id="cb110-50"><a href="#cb110-50" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(RSE_raw, <span class="dv">2</span>),</span>
-<span id="cb110-51"><a href="#cb110-51" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(RSE_raw, <span class="dv">4</span>),</span>
-<span id="cb110-52"><a href="#cb110-52" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(RSE_raw, <span class="dv">3</span>)),</span>
-<span id="cb110-53"><a href="#cb110-53" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">95% CI</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste0</span>(<span class="st">"["</span>, Lower, <span class="st">", "</span>, Upper, <span class="st">"]"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb110-54"><a href="#cb110-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">type =</span> panel, <span class="at">Parameter =</span> abb, Mean, SD, <span class="st">`</span><span class="at">95% CI</span><span class="st">`</span>, RSE) <span class="sc">%&gt;%</span></span>
-<span id="cb110-55"><a href="#cb110-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>()</span>
-<span id="cb110-56"><a href="#cb110-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb110-57"><a href="#cb110-57" aria-hidden="true" tabindex="-1"></a>panel_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"struct"</span>, <span class="st">"IIV"</span>, <span class="st">"RV"</span>)</span>
-<span id="cb110-58"><a href="#cb110-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb110-59"><a href="#cb110-59" aria-hidden="true" tabindex="-1"></a>param_df <span class="ot">&lt;-</span> param_df <span class="sc">%&gt;%</span></span>
-<span id="cb110-60"><a href="#cb110-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">type =</span> <span class="fu">factor</span>(type, <span class="at">levels =</span> panel_order)) <span class="sc">%&gt;%</span></span>
-<span id="cb110-61"><a href="#cb110-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(type, Parameter)</span>
-<span id="cb110-62"><a href="#cb110-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb110-63"><a href="#cb110-63" aria-hidden="true" tabindex="-1"></a>png_table <span class="ot">&lt;-</span> param_df <span class="sc">%&gt;%</span></span>
-<span id="cb110-64"><a href="#cb110-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_new</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb110-65"><a href="#cb110-65" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_panel</span>(<span class="st">"type"</span>, <span class="at">duplicates_ok =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb110-66"><a href="#cb110-66" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_center</span>(<span class="at">Parameter =</span> <span class="st">"l"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb110-67"><a href="#cb110-67" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stable</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb110-68"><a href="#cb110-68" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_image</span>()</span>
-<span id="cb110-69"><a href="#cb110-69" aria-hidden="true" tabindex="-1"></a>png_table</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb110-14"><a href="#cb110-14" aria-hidden="true" tabindex="-1"></a>num_theta8_removed</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb112"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1" aria-hidden="true" tabindex="-1"></a>num_theta3_removed</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb114"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a>params_long <span class="ot">&lt;-</span> params_df <span class="sc">%&gt;%</span></span>
+<span id="cb114-2"><a href="#cb114-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">everything</span>(), <span class="at">names_to =</span> <span class="st">"name"</span>, <span class="at">values_to =</span> <span class="st">"Value"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb114-3"><a href="#cb114-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(key, <span class="at">by =</span> <span class="st">"name"</span>) <span class="sc">%&gt;%</span>  </span>
+<span id="cb114-4"><a href="#cb114-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(name <span class="sc">==</span> <span class="st">"THETA8"</span> <span class="sc">&amp;</span> Value <span class="sc">&gt;</span> <span class="dv">2000</span>)) <span class="sc">%&gt;%</span> <span class="do">###remove values &gt;2000 </span></span>
+<span id="cb114-5"><a href="#cb114-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(name <span class="sc">==</span> <span class="st">"THETA3"</span> <span class="sc">&amp;</span> Value <span class="sc">&gt;</span> <span class="dv">700</span>)) <span class="do">###remove values &gt;700 </span></span>
+<span id="cb114-6"><a href="#cb114-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb114-7"><a href="#cb114-7" aria-hidden="true" tabindex="-1"></a>param_df <span class="ot">&lt;-</span> params_long <span class="sc">%&gt;%</span></span>
+<span id="cb114-8"><a href="#cb114-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(name, abb, panel) <span class="sc">%&gt;%</span></span>
+<span id="cb114-9"><a href="#cb114-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb114-10"><a href="#cb114-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean_raw =</span> <span class="fu">mean</span>(Value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb114-11"><a href="#cb114-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">SD_raw =</span> <span class="fu">sd</span>(Value, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb114-12"><a href="#cb114-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">Lower_raw =</span> <span class="fu">quantile</span>(Value, <span class="fl">0.025</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb114-13"><a href="#cb114-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Upper_raw =</span> <span class="fu">quantile</span>(Value, <span class="fl">0.975</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb114-14"><a href="#cb114-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">RSE_raw =</span> SD_raw <span class="sc">/</span> Mean_raw <span class="sc">*</span> <span class="dv">100</span>,</span>
+<span id="cb114-15"><a href="#cb114-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb114-16"><a href="#cb114-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb114-17"><a href="#cb114-17" aria-hidden="true" tabindex="-1"></a>     <span class="at">Mean =</span> <span class="fu">case_when</span>(</span>
+<span id="cb114-18"><a href="#cb114-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(Mean_raw, <span class="dv">2</span>),</span>
+<span id="cb114-19"><a href="#cb114-19" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(Mean_raw, <span class="dv">4</span>),</span>
+<span id="cb114-20"><a href="#cb114-20" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(Mean_raw, <span class="dv">3</span>)),</span>
+<span id="cb114-21"><a href="#cb114-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">SD =</span> <span class="fu">case_when</span>(</span>
+<span id="cb114-22"><a href="#cb114-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(SD_raw, <span class="dv">2</span>),</span>
+<span id="cb114-23"><a href="#cb114-23" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(SD_raw, <span class="dv">4</span>),</span>
+<span id="cb114-24"><a href="#cb114-24" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(SD_raw, <span class="dv">3</span>)),</span>
+<span id="cb114-25"><a href="#cb114-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">Lower =</span> <span class="fu">case_when</span>(</span>
+<span id="cb114-26"><a href="#cb114-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(Lower_raw, <span class="dv">2</span>),</span>
+<span id="cb114-27"><a href="#cb114-27" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(Lower_raw, <span class="dv">4</span>),</span>
+<span id="cb114-28"><a href="#cb114-28" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(Lower_raw, <span class="dv">3</span>)),</span>
+<span id="cb114-29"><a href="#cb114-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">Upper =</span> <span class="fu">case_when</span>(</span>
+<span id="cb114-30"><a href="#cb114-30" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(Upper_raw, <span class="dv">2</span>),</span>
+<span id="cb114-31"><a href="#cb114-31" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(Upper_raw, <span class="dv">4</span>),</span>
+<span id="cb114-32"><a href="#cb114-32" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(Upper_raw, <span class="dv">3</span>)),</span>
+<span id="cb114-33"><a href="#cb114-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">RSE =</span> <span class="fu">case_when</span>(</span>
+<span id="cb114-34"><a href="#cb114-34" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">"THETA"</span>, name) <span class="sc">~</span> <span class="fu">round</span>(RSE_raw, <span class="dv">2</span>),</span>
+<span id="cb114-35"><a href="#cb114-35" aria-hidden="true" tabindex="-1"></a>      panel <span class="sc">==</span> <span class="st">"RV"</span> <span class="sc">~</span> <span class="fu">round</span>(RSE_raw, <span class="dv">4</span>),</span>
+<span id="cb114-36"><a href="#cb114-36" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="fu">round</span>(RSE_raw, <span class="dv">3</span>)),</span>
+<span id="cb114-37"><a href="#cb114-37" aria-hidden="true" tabindex="-1"></a>    <span class="st">`</span><span class="at">95% CI</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste0</span>(<span class="st">"["</span>, Lower, <span class="st">", "</span>, Upper, <span class="st">"]"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb114-38"><a href="#cb114-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">type =</span> panel, <span class="at">Parameter =</span> abb, Mean, SD, <span class="st">`</span><span class="at">95% CI</span><span class="st">`</span>, RSE) <span class="sc">%&gt;%</span></span>
+<span id="cb114-39"><a href="#cb114-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>()</span>
+<span id="cb114-40"><a href="#cb114-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb114-41"><a href="#cb114-41" aria-hidden="true" tabindex="-1"></a>panel_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"struct"</span>, <span class="st">"IIV"</span>, <span class="st">"RV"</span>)</span>
+<span id="cb114-42"><a href="#cb114-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb114-43"><a href="#cb114-43" aria-hidden="true" tabindex="-1"></a>param_df <span class="ot">&lt;-</span> param_df <span class="sc">%&gt;%</span></span>
+<span id="cb114-44"><a href="#cb114-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">type =</span> <span class="fu">factor</span>(type, <span class="at">levels =</span> panel_order)) <span class="sc">%&gt;%</span></span>
+<span id="cb114-45"><a href="#cb114-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(type, Parameter)</span>
+<span id="cb114-46"><a href="#cb114-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb114-47"><a href="#cb114-47" aria-hidden="true" tabindex="-1"></a>png_table <span class="ot">&lt;-</span> param_df <span class="sc">%&gt;%</span></span>
+<span id="cb114-48"><a href="#cb114-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_new</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb114-49"><a href="#cb114-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_panel</span>(<span class="st">"type"</span>, <span class="at">duplicates_ok =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb114-50"><a href="#cb114-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_center</span>(<span class="at">Parameter =</span> <span class="st">"l"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb114-51"><a href="#cb114-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stable</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb114-52"><a href="#cb114-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_image</span>()</span>
+<span id="cb114-53"><a href="#cb114-53" aria-hidden="true" tabindex="-1"></a>png_table</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="ceftaz-analysis-bayes_stan_files/figure-html/bs2cmt%20params-1.png" class="img-fluid figure-img" width="304"></p>
+</figure>
+</div>
+</div>
 </div>
 </section>
 </section>
@@ -3169,7 +3187,7 @@ Use `renv::init()` to initialize the project.</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb111"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb111-1"><a href="#cb111-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb115"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb115-1"><a href="#cb115-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.2 (2023-10-31 ucrt)
