@@ -1,0 +1,2422 @@
+---
+title: "Pharmacokinetics of ceftolozane with tazobactam in critically ill patients - Bayesian approach"
+author:  
+  - Paulina Okuńska (okunskapaul@gmail.com)
+  - Pawel Wiczling
+date: today
+date-format: long
+format:
+  html:
+    toc: true
+    code-fold: true
+  pdf:
+    tov: true
+    lof: true
+    lot: true
+execute:
+  warning: false
+  
+params:
+  run: "5"
+  modelDir: here::here("model/BAYES")
+  script: "ceftaz-analysis-bayes_stan.qmd"
+  n_per_page: 4
+  include_code: TRUE
+  include_plots: TRUE
+# n_thin: select every `n_thin` samples for trace/density plots
+  n_thin: 1
+# n_thin2: select every `n_thin2` samples for Bayes pairs plots
+  n_thin2: 10
+# theta_cov: indices of covariate THETAs to separate when creating pairs plots, e.g. !r c(1, 2, 6)
+#   set to NULL to create a single pairs plot for THETAs
+  theta_cov: NULL
+---
+
+**Introduction**
+
+Comprehensive Bayesian model analysis of population pharmacokinetics of ceftolozane/tazobactam.
+This script includes analyses of MCMC chains, assessments of model goodness-of-fit, and probability of target attainment (PTA) analyses comparing a one-compartment covariance model, a one-compartment bootstrap model, and a two-compartment Bayesian model.
+
+piors based on: Larson, K. B. et al. Ceftolozane-Tazobactam Population Pharmacokinetics and Dose Selection for Further Clinical Evaluation in Pediatric Patients with Complicated Urinary Tract or Complicated Intra-Abdominal Infections. https://doi.org/10 
+
+
+```{r setuphtml, include=FALSE}
+#devtools::install_github("metrumresearchgroup/bbr", ref = "main")
+#devtools::install_github("metrumresearchgroup/bbr.bayes", ref = "main")
+#devtools::install_github("metrumresearchgroup/pmplots")
+#devtools::install_github("metrumresearchgroup/pmtables")
+#devtools::install_github("mjskay/tidybayes")
+#remotes::install_github("metrumresearchgroup/nmrec")
+```
+
+## Settings
+
+```{r loadlibrary, message=FALSE, warning=FALSE}
+
+options(renv.config.dependencies.limit = Inf)
+renv::status()
+
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  eval = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  dpi = 300)
+
+library(pracma)
+library(bbr)
+library(bbr.bayes)
+library(bayesplot)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(mrgsolve)
+library(mrggsave)
+library(vpc)
+library(pmplots)
+library(naniar)
+library(knitr)
+library(data.table)
+library(tidyverse)
+library(stable)
+library(glue)
+library(whisker)
+library(here)
+library(scales)
+library(pmplots)
+library(pmtables) 
+library(nmrec)
+library(cmdstanr)
+library(gridExtra)
+library(cowplot)
+#library(posterior)
+library(magrittr)
+library(yaml)
+library(magick)
+library(patchwork)
+library(loo)
+library(tidybayes)
+library(furrr) 
+library(future)
+library(rlang)
+library(simpar)
+library(MESS)
+library(PKNCA)
+library(conflicted)
+library(parallel)
+
+suppressPackageStartupMessages(library(posterior))
+suppressPackageStartupMessages(library(tidyverse))
+
+# conflicts
+
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("summarize", "dplyr")
+conflict_prefer("as.data.frame", "base")
+conflict_prefer("sd", "posterior")
+conflict_prefer("mad", "posterior")
+conflict_prefer("rhat", "posterior")
+
+set_cmdstan_path("D:/Torsten-master/cmdstan")
+
+# helper functions
+source(here::here("scripts/helpers/functions-table.R"))
+source(here::here("scripts/helpers/functions-plots.R"))
+source(here::here("scripts/helpers/functions-mcmc-diagnostics.R"))
+source(here::here("scripts/helpers/functions-diagnostics-rhat-ess.R"))
+source(here::here("scripts/helpers/resampling_functions.R"))
+
+# table summary 
+
+sigfun = function(.x){sig(.x,digits=3)}
+
+thisScript <- "ceftaz-analysis-bayes_stan.qmd"
+
+thisScript <- params$script
+options(
+  mrg.script = params$script,
+  mrggsave.dev = "pdf,png"
+)
+
+```
+
+
+```{r settings}
+
+#directory
+data_dir <- here::here("data","derived") 
+model_dir <- here::here("model","BAYES")  
+figure_dir <- here::here("deliv","figures")
+table_dir <- here::here("deliv","tables")
+figure_mcmc_dir <- here::here("deliv", "figures", "MCMC")
+
+thisFigDir <- file.path(figure_mcmc_dir, params$run)
+options(mrggsave.dir = thisFigDir)
+
+source(here("scripts/helpers/helper_model_diagnostic.R"))
+
+if (!file.exists(figure_mcmc_dir)) dir.create(figure_mcmc_dir)
+
+cmdstanr::check_cmdstan_toolchain()
+
+#bbr
+
+options(bbr.bbi_exe_path = "C:/Users/pauoku/AppData/Roaming/bbi/bbi.exe") ### need to be changed to your directory
+
+bbr::use_bbi()
+
+bbi_init(.dir = model_dir,            # the directory to create the bbi.yaml in
+         .nonmem_dir = "C:/",         # location of NONMEM installation
+         .nonmem_version = "nm75g64",  # default NONMEM version to use
+.bbi_args = list(
+      parallel = TRUE,
+      threads = 4
+    )
+)
+
+#       mpi_exec_path ="C:/nm75g64/run/psexec",
+#       parafile = "C:/nm75g64/run/fpiwini8.pnm",
+
+this_theme <- pmplots::pm_theme() + theme(text = element_text(size = 12), axis.text = element_text(size = 10))
+theme_set(this_theme)
+
+```
+
+# Data
+
+Load data:
+
+```{r load-data}
+
+xdata <- read.csv(paste0(data_dir, "/", "RawData.csv", na.strings = "."))
+
+head(xdata)
+
+```
+
+## Stan
+
+```{r  model5, results = "asis"}
+
+mod5  <- read_model(file.path(model_dir, params$run))
+mod5
+mod5_res <- read_fit_model(mod5)
+
+```
+
+# Diagnostics from cmdstanr
+
+## Tables
+
+```{r table}
+
+pars = c("lp__", "CLCHat", "QCHat", "V1CHat", "V2CHat",
+         "CLTHat", "QTHat", "V1THat", "V2THat",
+         "omega", "sigma","nu")
+ptable <- mod5_res$summary(c(pars)) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>% 
+  rename(parameter = variable) %>%
+  mutate("90% CI" = paste("(", q5, ", ", q95, ")", 
+                          sep = "")) %>%
+select(parameter, mean, median, sd, mad, "90% CI", ess_bulk, ess_tail, rhat)
+ptable
+
+```
+
+
+```{r params table greek }
+
+pars1 <- c("CLCHat", "QCHat", "V1CHat", "V2CHat",
+           "CLTHat", "QTHat", "V1THat", "V2THat",
+           "omega", "sigma", "nu")
+
+thetas <- c("CLCHat", "QCHat", "V1CHat", "V2CHat",
+            "CLTHat", "QTHat", "V1THat", "V2THat")
+
+rest   <- c("omega[1]", "omega[2]", "omega[3]", "omega[4]", 
+            "omega[5]", "omega[6]", "omega[7]", "omega[8]",
+            "sigma[1]", "sigma[2]", "nu[1]", "nu[2]")
+
+theta_names <- c("CLC", "QC", "V1C", "V2C", "CLT", "QT", "V1T", "V2T") 
+
+ptable_all <- mod5_res$summary(c(pars1)) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>%
+  rename(parameter = variable) %>%
+  mutate(`90% CI` = paste0("(", q5, ", ", q95, ")")) %>%
+  select(parameter, mean, median, sd, mad, `90% CI`, rhat)
+
+gtGreek <- function(text) {
+  case_when(
+    text %in% c("CLC", "QC", "V1C", "V2C", "CLT", "QT", "V1T", "V2T") ~ 
+      paste0("\\theta_{\\text{", text, "}}"),
+    text == "omega" ~ "\\Omega",
+    text == "sigma" ~ "\\Sigma",
+    text == "nu"    ~ "\\nu",
+    TRUE ~ text)
+}
+
+mathMode <- function(x) paste0("$", x, "$")
+
+formatGreekNames <- function(df) {
+  df %>%
+    mutate(is_theta = str_ends(parameter, "Hat$"),
+           base = if_else(is_theta, str_remove(parameter, "Hat$"), parameter)) %>%
+    mutate(greek = mathMode(gtGreek(base))) %>%
+    select(parameter = greek,
+           mean, median, sd, mad, `90% CI`, rhat)
+}
+
+ptable1_greek <- ptable_all %>%
+  filter(parameter %in% thetas) %>%
+  formatGreekNames()
+
+ptable2_greek <- ptable_all %>%
+  filter(parameter %in% rest) %>%
+  formatGreekNames()
+
+param_df <- bind_rows(ptable1_greek, ptable2_greek) %>%
+  arrange(!str_detect(parameter, "Omega|Sigma|nu"), parameter)
+
+footAbbrev <- "Abbreviations: SD = standard deviation; MAD = Median Absolute Deviation; CI = confidence intervals; R-hat = Gelman–Rubin convergence diagnostic"
+
+fixed <- param_df %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.5), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() %>%
+  st_as_image()
+
+fixed
+
+ptable_rest <- mod5_res$summary(rest) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>%
+  rename(parameter = variable) %>%
+  mutate(`90% CI` = paste0("(", q5, ", ", q95, ")")) %>%
+  select(parameter, mean, median, sd, mad, `90% CI`, rhat) %>%
+  mutate(base = str_extract(parameter, "^[a-z]+"),
+         index = as.numeric(str_extract(parameter, "\\d+")),
+         index_text = case_when(
+           base == "omega" ~ theta_names[index],
+           base == "sigma" ~ paste0("sigma", index),
+           base == "nu"    ~ paste0("nu", index)),
+         parameter = case_when(
+           base == "omega" ~ paste0("$\\Omega_{\\text{", index_text, "}}$"),
+           base == "sigma" ~ paste0("$\\Sigma_{", index, "}$"),
+           base == "nu"    ~ paste0("$\\nu_{",    index, "}$"))) %>%
+  select(-base, -index, -index_text)
+
+rests <- ptable_rest %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.0), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() %>%
+  st_as_image()
+
+rests
+
+```
+
+
+```{r add 95CI}
+
+theta_params <- thetas
+omega_sigma_params <- rest[str_detect(rest, "omega|sigma")]
+other_params <- rest[str_detect(rest, "nu")]
+sigma_params <- c("sigma[1]", "sigma[2]")
+
+footAbbrev <- "Abbreviations: SD = standard deviation; MAD = Median Absolute Deviation; CI = confidence intervals; R-hat = Gelman–Rubin convergence diagnostic"
+
+pars <- c("lp__", pars1)
+
+draws <- mod5_res$draws(pars)
+
+sig <- function(x, digits=2) round(x, digits)
+
+ptable_all <- summarise_draws(
+  draws,
+  mean,
+  median,
+  sd,
+  mad,
+  q2.5  = ~quantile(.x, 0.025),
+  q5    = ~quantile(.x, 0.05),
+  q95   = ~quantile(.x, 0.95),
+  q97.5 = ~quantile(.x, 0.975),
+  ess_bulk,
+  ess_tail,
+  rhat) %>%
+  rename(parameter = variable) %>%
+  mutate(
+     `%RSE` = if_else(mean != 0, (sd / mean) * 100, NA_real_),    
+    `CV%`  = if_else(parameter %in% omega_sigma_params & mean != 0, (sd / mean) * 100, NA_real_)) %>% 
+  mutate(
+    `%RSE` = if_else(parameter %in% theta_params, formatC(`%RSE`, format = "f", digits = 2), NA_character_),
+    `CV%`  = if_else(parameter %in% omega_sigma_params, formatC(`CV%`, format = "f", digits = 3), NA_character_)) %>%  
+  mutate(
+    mean  = if_else(parameter %in% theta_params, formatC(mean,  format = "f", digits = 2),
+                     formatC(mean,  format = "f", digits = 3)),
+    median= if_else(parameter %in% theta_params, formatC(median, format = "f", digits = 2),
+                     formatC(median, format = "f", digits = 3)),
+    sd    = if_else(parameter %in% theta_params, formatC(sd, format = "f", digits = 2),
+                     formatC(sd, format = "f", digits = 3)),
+    mad   = if_else(parameter %in% theta_params, formatC(mad, format = "f", digits = 2),
+                     formatC(mad, format = "f", digits = 3)),
+    `%RSE`= if_else(parameter %in% theta_params, formatC(`%RSE`, format = "f", digits = 2), `%RSE`),
+    `CV%` = if_else(parameter %in% omega_sigma_params, formatC(`CV%`, format = "f", digits = 2), `CV%`),
+    `2.5%`  = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`2.5%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params, 
+                               formatC(as.numeric(`2.5%`), format = "f", digits = 4),
+                               formatC(as.numeric(`2.5%`), format = "f", digits = 3))),
+    `5%`    = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`5%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params,
+                               formatC(as.numeric(`5%`), format = "f", digits = 4),
+                               formatC(as.numeric(`5%`), format = "f", digits = 3))),
+    `95%`   = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`95%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params,
+                               formatC(as.numeric(`95%`), format = "f", digits = 4),
+                               formatC(as.numeric(`95%`), format = "f", digits = 3))),
+    `97.5%` = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`97.5%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params,
+                               formatC(as.numeric(`97.5%`), format = "f", digits = 4),
+                               formatC(as.numeric(`97.5%`), format = "f", digits = 3)))) %>%
+    mutate(across(c("mean", "sd", "2.5%", "97.5%"), 
+                  ~if_else(parameter %in% c("sigma[1]", "sigma[2]"),
+                           formatC(as.numeric(.), format = "f", digits = 4), .))) %>% 
+  mutate(`90% CI` = paste0("(", `5%`, ", ", `95%`, ")"),
+         `95% CI` = paste0("(", `2.5%`, ", ", `97.5%`, ")")) %>% 
+  mutate(ess_bulk = round(ess_bulk, 0), ess_tail = round(ess_tail,0), rhat = round(rhat, 2)) %>% 
+  select(parameter, mean, median, sd, mad, `%RSE`, `CV%`,  `95% CI`, ess_bulk, ess_tail, rhat) #`90% CI`,
+
+gtGreek <- function(text) {
+  case_when(
+    text %in% c("CLC", "QC", "V1C", "V2C", "CLT", "QT", "V1T", "V2T") ~ 
+      paste0("\\theta_{\\text{", text, "}}"),
+    text == "omega" ~ "\\Omega",
+    text == "sigma" ~ "\\Sigma",
+    text == "nu"    ~ "\\nu",
+    TRUE ~ text
+  )
+}
+
+mathMode <- function(x) paste0("$", x, "$")
+
+formatGreekNames <- function(df) {
+  df %>%
+    mutate(is_theta = str_ends(parameter, "Hat$"),
+           base = if_else(is_theta, str_remove(parameter, "Hat$"), parameter)) %>%
+    mutate(greek = mathMode(gtGreek(base))) %>%
+    select(parameter = greek,
+           mean, median, sd, mad, `%RSE`, `CV%`,  `95% CI`, ess_bulk, ess_tail, rhat) #`90% CI`,
+}
+
+ptable1_greek <- ptable_all %>%
+  filter(parameter %in% thetas) %>%
+  formatGreekNames()
+
+ptable2_greek <- ptable_all %>%
+  filter(parameter %in% rest) %>%
+  formatGreekNames()
+
+param_df <- bind_rows(ptable1_greek, ptable2_greek) %>%
+  arrange(!str_detect(parameter, "Omega|Sigma|nu"), parameter)
+
+fixed <- param_df %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.5), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() %>%
+  st_as_image()
+
+fixed 
+
+ptable_rest <- ptable_all %>%
+  filter(parameter %in% rest) %>%
+  mutate(base = str_extract(parameter, "^[a-z]+"),
+         index = as.numeric(str_extract(parameter, "\\d+")),
+         index_text = case_when(
+           base == "omega" ~ theta_names[index],
+           base == "sigma" ~ paste0("sigma", index),
+           base == "nu"    ~ paste0("nu", index)),
+         parameter = case_when(
+           base == "omega" ~ paste0("$\\Omega_{\\text{", index_text, "}}$"),
+           base == "sigma" ~ paste0("$\\Sigma_{", index, "}$"),
+           base == "nu"    ~ paste0("$\\nu_{",    index, "}$"))) %>%
+  select(parameter, mean, median, sd, mad, `%RSE`,`CV%`,  `95% CI`, rhat) #`90% CI`,
+
+rests <- ptable_rest %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.0), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() %>%
+  st_as_image()
+
+rests
+
+```
+
+
+```{r table-corr}
+
+pars2 = c("lp__", "rho")
+ptable <- mod5_res$summary(c(pars2)) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>% 
+  rename(parameter = variable) %>%
+  mutate("90% CI" = paste("(", q5, ", ", q95, ")", 
+                          sep = "")) %>%
+select(parameter, mean, median, sd, mad, "90% CI", ess_bulk, ess_tail, rhat)
+ptable
+
+```
+
+## MCMC
+
+```{r trace-plots}
+
+color_scheme_set("mix-blue-red")
+
+bayesplot::mcmc_trace(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_trace(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_trace(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_trace(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+plot_title <- ggtitle("Posterior distributions",
+                      "with medians and 80% intervals")
+
+# bayesplot::mcmc_areas(mod5_res$draws(pars[1]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[2:5]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[6:9]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[10]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[11]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[12]),prob = 0.8) + plot_title + legend_move("bottom")
+
+```
+
+
+```{r mcm areas}
+
+plot_title <- ggtitle("Posterior distributions",
+                      "with medians and 80% intervals")
+
+bayesplot::mcmc_areas(mod5_res$draws(pars[1]),prob = 0.8) + plot_title + legend_move("bottom") + scale_y_discrete(labels = c("lp__" = expression(lp)))
+bayesplot::mcmc_areas(mod5_res$draws(pars[2:5]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("CLCHat" = expression(theta[CLC]), 
+                              "QCHat" = expression(theta[QC]),
+                              "V1CHat" = expression(theta[V1C]),
+                              "V2CHat" = expression(theta[V2C])),
+                   limits = t(rev(c("CLCHat", "QCHat", "V1CHat",  "V2CHat" ))))
+bayesplot::mcmc_areas(mod5_res$draws(pars[6:9]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("CLTHat" = expression(theta[CLT]),
+                              "QTHat" = expression(theta[QT]),
+                              "V1THat" = expression(theta[V1T]),
+                              "V2THat" = expression(theta[V2T])),
+                   limits = t(rev(c("CLTHat", "QTHat", "V1THat",  "V2THat" ))))
+bayesplot::mcmc_areas(mod5_res$draws(pars[10]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("omega[1]" = expression(omega[CLC]), 
+                              "omega[2]" = expression(omega[QC]),
+                              "omega[3]" = expression(omega[V1C]),
+                              "omega[4]" = expression(omega[V2C]),
+                              "omega[5]" = expression(omega[CLT]),
+                              "omega[6]" = expression(omega[QT]),
+                              "omega[7]" = expression(omega[V1T]),
+                              "omega[8]" = expression(omega[V2T])), 
+                   limits = t(rev(c("omega[1]","omega[2]","omega[3]","omega[4]","omega[5]","omega[6]","omega[7]","omega[8]"))))
+bayesplot::mcmc_areas(mod5_res$draws(pars[11]),prob = 0.8) + plot_title + legend_move("bottom") + 
+  scale_y_discrete(labels = c("sigma[1]" = expression(sigma[C]),
+                              "sigma[2]" = expression(sigma[T])),
+                    limits = rev(c("sigma[1]", "sigma[2]")))
+  
+bayesplot::mcmc_areas(mod5_res$draws(pars[12]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("nu[1]" = expression(nu[C]),
+                              "nu[2]" = expression(nu[T])),
+                   limits = rev(c("nu[1]", "nu[2]")))
+```
+
+## Shrinkage
+
+```{r shrinkage}
+
+etas <-  posterior::as_draws_df(mod5_res$draws("etaM"))%>%
+  mutate(across(starts_with("eta"), ~log(.x)))
+#errors <-  posterior::as_draws_df(mod_to_plot$draws("errors"))
+
+bbr.bayes::shrinkage(etas,"etaM",group_idx = 1, use_sd = TRUE)
+#bbr.bayes::shrinkage(errors,"errors", use_sd = TRUE)
+```
+
+## ETAS vs. covariates
+
+```{r covariets vs etas}
+
+etaM <- extract_etas_fun(mod5_res,xdata)
+
+model_figures_dir <- here::here("deliv", "figures", "BAYES")
+
+cont_cov = c("AGE//Age,y","BW//Body Weight, kg")
+cat_cov = c("SEX//Sex")
+
+p1 <- map(cont_cov, \(x) fun_cont_cov(x,etaM))
+p2 <- map(cat_cov, \(x) fun_cat_cov(x,etaM))
+
+plots <- c(p1, p2)
+plots
+map(1:length(plots), \(x) ggsave(filename = here::here(model_figures_dir, 
+                                 glue::glue("cov-plots-{x}.png")),
+                                 plot = plots[[x]], 
+                                 width=12, height=10, 
+                                 dpi=600, units="cm"))
+
+```
+
+## ETA correlation
+
+```{r ETA corr}
+
+t1 <- etaM  %>% 
+  filter(type %in% c("V1C", "V1T")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  ggplot() +
+  geom_point(aes(x = medianInd_V1C, y = medianInd_V1T))
+
+
+t2 <- etaM  %>% 
+  filter(type %in% c("CLC", "CLT")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  ggplot() +
+  geom_point(aes(x = medianInd_CLC, y = medianInd_CLT))
+
+t1 + t2
+
+etaM  %>% 
+  filter(type %in% c("CLC", "CLT", "V1C", "V1T")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  pairs_plot(c("medianInd_CLC//CLC", "medianInd_CLT//CLT", "medianInd_V1C//V1C","medianInd_V1T//V1T"))
+
+```
+
+## Prior vs posterior params
+
+```{r prior vs posterior}
+
+modx  <- read_model(here::here(model_dir, "6"))
+mod_to_plot1 <- read_fit_model(modx)
+modx  <- read_model(here::here(model_dir, "5"))
+mod_to_plot2 <- read_fit_model(modx)
+
+pars = c("CLCHat", "QCHat", "V1CHat", "V2CHat", "CLTHat", "QTHat", "V1THat", "V2THat")
+p1=bayesplot::mcmc_intervals(mod_to_plot1$draws(pars))
+p2=bayesplot::mcmc_intervals(mod_to_plot2$draws(pars))
+
+p1_data = p1$plot$data %>% mutate(type = "prior")
+p2_data = p2$plot$data %>% mutate(type = "posterior")
+
+plot1 <- rbind(p1_data,p2_data)%>%
+  ggplot(aes(y=type, x=m))+
+  geom_point(size=2, color = "#4A2C2A")+
+  geom_linerange(aes(xmin = l, xmax = h), size=1,color = "#4A2C2A")+
+  geom_linerange(aes(xmin = ll, xmax = hh),color = "#4A2C2A")+
+  labs(x="",y="")+
+  theme(strip.background = element_blank()) +
+  facet_wrap(~parameter, scales="free_x")
+
+plot1
+
+res_both <- rbind(p1_data,p2_data) %>% 
+  select(c("parameter", "ll", "m", "hh", "type")) %>% 
+  group_by(parameter) %>% 
+  arrange(parameter) %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  ungroup()
+
+res_both
+
+theta_labels <- c(
+  CLCHat = "theta[CLC]",
+  QCHat  = "theta[QC]",
+  V1CHat = "theta[V1C]",
+  V2CHat = "theta[V2C]",
+  CLTHat = "theta[CLT]",
+  QTHat  = "theta[QT]",
+  V1THat = "theta[V1T]",
+  V2THat = "theta[V2T]")
+
+plot2 <- rbind(p1_data, p2_data) %>%
+  mutate(parameter = theta_labels[parameter], parameter = factor(parameter, levels = c("theta[CLC]", "theta[QC]", "theta[V1C]", "theta[V2C]", "theta[CLT]", "theta[QT]", "theta[V1T]", "theta[V2T]"))) %>%
+  ggplot(aes(y = type, x = m)) +
+  geom_point(size = 2, color = "#4A2C2A") +
+  geom_linerange(aes(xmin = l, xmax = h), size = 1, color = "#4A2C2A") +
+  geom_linerange(aes(xmin = ll, xmax = hh), color = "#4A2C2A") +
+  labs(x = "", y = "") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 11)) +
+  facet_wrap(~parameter, scales = "free_x", labeller = label_parsed)
+
+plot2
+
+```
+
+
+```{r dataframe-stan, eval = FALSE, echo = FALSE}
+
+d_df <- as_draws_df(mod5_res)
+print(dim(d_df))
+
+```
+
+## individual and population predictions
+
+```{r Indiv-pop-stan}
+
+# Posterior predictive checks
+
+title_cef <- "CEFTOLOZANE"
+title_taz <- "TAZOBACTAM"
+yrepCond1 <- as_draws_matrix(mod5_res$draws(variables = c("cCond"))) #individual
+yrepPred1 <- as_draws_matrix(mod5_res$draws(variables = c("cPred"))) #population
+
+yobs <- xdata$DV 
+yobs[yobs==0] = 1000
+time <- xdata$TIME  
+patientID <- xdata$ID   
+
+#CEF 
+
+color_scheme_set("orange")
+# within patient predictions
+ktore <- (xdata$CMT==1)
+cef1 <- bayesplot::ppc_intervals_grouped(y = yobs[ktore], 
+                                 yrep = yrepCond1[, ktore], 
+                                 x = time[ktore], 
+                                 patientID[ktore])+
+  scale_y_log10(limits = c(0.01, 300)) +
+  coord_cartesian(ylim=c(0.1,200)) +
+  ggtitle(title_cef) +
+  theme(strip.background = element_blank()) +
+  ggplot2::labs(x = "TIME, h", 
+                y = "Individual Predicted Concentration, ug/mL") + 
+  theme(legend.position = c(.85, 0.1), 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "grey95", color = "grey95", size = 0.5)) 
+cef1
+
+# predictions for new patient
+
+ktore <- (xdata$CMT==1)
+cef2 <- bayesplot::ppc_intervals_grouped(y = yobs[ktore], 
+                                 yrep = yrepPred1[, ktore], 
+                                 x = time[ktore], 
+                                 patientID[ktore])+
+  scale_y_log10(limits = c(0.01, 300)) +
+  coord_cartesian(ylim=c(0.1,200)) +
+  ggtitle(title_cef) +
+  theme(strip.background = element_blank()) +
+  ggplot2::labs(x = "TIME, h", 
+                y = "Population Predicted Concentration, ug/mL") + 
+  theme(legend.position = c(.85, 0.1), 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "grey95", color = "grey95", size = 0.5))
+cef2 
+
+#TAZ
+
+color_scheme_set("blue")
+
+# within patient predictions
+ktore <- (xdata$CMT==3)
+taz1 <- bayesplot::ppc_intervals_grouped(y = yobs[ktore], 
+                                 yrep = yrepCond1[, ktore], 
+                                 x = time[ktore], 
+                                 patientID[ktore])+
+  scale_y_log10(limits = c(0.01, 300)) +
+  coord_cartesian(ylim=c(0.1,200)) +
+  ggtitle(title_taz) +
+  theme(strip.background = element_blank()) +
+  ggplot2::labs(x = "TIME, h", 
+                y = "Individual Predicted concentration, ug/mL") + 
+  theme(legend.position = c(.85, 0.1), 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "grey95", color = "grey95", size = 0.5))
+taz1
+
+# predictions for new patient
+
+ktore <- (xdata$CMT==1)
+taz2 <- bayesplot::ppc_intervals_grouped(y = yobs[ktore], 
+                                 yrep = yrepPred1[, ktore], 
+                                 x = time[ktore], 
+                                 patientID[ktore])+
+  scale_y_log10(limits = c(0.01, 300)) +
+  coord_cartesian(ylim=c(0.1,200)) +
+  ggtitle(title_taz) +
+  theme(strip.background = element_blank()) +
+  ggplot2::labs(x = "TIME, h", 
+                y = "Population Predicted concentration, ug/mL") + 
+  theme(legend.position = c(.85, 0.1), 
+        legend.title = element_blank(),
+        legend.background = element_rect(fill = "grey95", color = "grey95", size = 0.5))
+taz2 
+
+```
+
+```{r PREDICION-stan}
+
+## Combine both types of predictions
+predInd <- posterior::as_draws_df(mod5_res$draws("cCond")) %>%
+  pivot_longer(cols = starts_with("cCond"),
+               names_transform = list(name = forcats::fct_inorder)) %>%
+  group_by(name) %>%
+  summarize(lbInd = quantile(value, probs = 0.05, na.rm = TRUE),
+            medianInd = quantile(value, probs = 0.5, na.rm = TRUE),
+            ubInd = quantile(value, probs = 0.95, na.rm = TRUE))
+
+predPop <- posterior::as_draws_df(mod5_res$draws("cPred")) %>%
+  pivot_longer(cols = starts_with("cPred"),
+               names_transform = list(name = forcats::fct_inorder)) %>%
+  group_by(name) %>%
+  summarize(lbPop = quantile(value, probs = 0.05, na.rm = TRUE),
+            medianPop = quantile(value, probs = 0.5, na.rm = TRUE),
+            ubPop = quantile(value, probs = 0.95, na.rm = TRUE))
+
+predAll <- bind_cols(xdata, predInd, predPop) %>%
+  mutate(DV = if_else(EVID==0,DV, NA))
+
+#CEF
+
+ppc <- ggplot(predAll %>% filter(CMT == 1), 
+                   aes(x = TIME, y = DV)) +
+  geom_line(aes(x = TIME, y = medianPop, 
+                color = "population") ) +
+  geom_ribbon(aes(ymin = lbPop, ymax = ubPop, 
+                  fill = "population"), 
+              alpha = 0.25) +
+  geom_line(aes(x = TIME, y = medianInd, 
+                color = "individual") ) +
+  geom_ribbon(aes(ymin = lbInd, ymax = ubInd, 
+                  fill = "individual"), 
+              alpha = 0.25) +
+  scale_color_manual(name  ="prediction:",
+                     breaks=c("individual", "population"),
+                     values = c("#7A2525", "#1F3A6B")) +
+  scale_fill_manual(name  ="prediction:",
+                    breaks=c("individual", "population"),
+                    values = c("#7A2525", "#1F3A6B")) +
+  geom_point(na.rm = TRUE, size = 0.5) +
+  scale_y_log10(limits=c(0.1,200)) +
+  labs(x = "Time, h",
+       y = "Ceftolozane plasma drug concentration, ug/mL") +
+  theme(text = element_text(size = 12),
+        axis.text = element_text(size = 12),
+        legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8)) +
+  facet_wrap(~ ID)
+
+#TAZ
+
+ppt <- ggplot(predAll %>% filter(CMT == 3), 
+               aes(x = TIME, y = DV)) +
+  geom_line(aes(x = TIME, y = medianPop, 
+                color = "population") ) +
+  geom_ribbon(aes(ymin = lbPop, ymax = ubPop, 
+                  fill = "population"), 
+              alpha = 0.25) +
+  geom_line(aes(x = TIME, y = medianInd, 
+                color = "individual") ) +
+  geom_ribbon(aes(ymin = lbInd, ymax = ubInd, 
+                  fill = "individual"), 
+              alpha = 0.25) +
+  scale_color_manual(name  ="prediction:",
+                     breaks=c("individual", "population"),
+                     values = c("#7A2525", "#1F3A6B")) +
+  scale_fill_manual(name  ="prediction:",
+                    breaks=c("individual", "population"),
+                    values = c("#7A2525", "#1F3A6B")) +
+  geom_point(na.rm = TRUE, size = 0.5) +
+  scale_y_log10(limits=c(0.1,50)) +
+  labs(x = "Time, h",
+       y = "Tazobactam plasma drug concentration, ug/mL") +
+  theme(text = element_text(size = 12),
+        axis.text = element_text(size = 12),
+        legend.position = "bottom",
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8)) +
+  facet_wrap(~ ID)
+
+ppc
+ppt
+
+```
+
+# VPC
+
+```{r VPC-stan}
+
+nPost <- mod5_res$metadata()$iter_sampling / mod5_res$metadata()$thin
+n_chains <- 4
+predPop <- posterior::as_draws_df(mod5_res$draws("cPred")) %>%
+  pivot_longer(cols = starts_with("cPred"),
+               names_transform = list(name = forcats::fct_inorder)) %>%
+  mutate(ID = rep(xdata$ID, n_chains * nPost),
+         TIME = rep(xdata$TIME, n_chains * nPost),
+         CMT = rep(xdata$CMT, n_chains * nPost),
+         EVID = rep(xdata$EVID, n_chains * nPost),
+         DV = rep(xdata$DV, n_chains * nPost))
+
+CMT_labs <- c("1" = "CEFTOLOZANE", "3" = "TAZOBACTAM")
+
+vpcPlotraw <- vpc(sim = predPop %>% filter(!is.na(DV)) %>% filter(EVID==0),
+               obs = xdata %>% filter(!is.na(DV)) %>% filter(EVID==0),
+               obs_cols = list(id = "ID", dv = "DV", idv = "TIME"),
+               sim_cols = list(is = "ID", dv = "value", idv = "TIME"),
+               ci = c(0.1, 0.9), pi = c(0.1, 0.9),
+               stratify = "CMT",
+               labeller = labeller(CMT = CMT_labs),
+               show = list(obs_dv = FALSE, obs_ci = TRUE, 
+                           pi = FALSE, pi_as_area = FALSE, pi_ci = TRUE, 
+                           obs_median = TRUE, sim_median = FALSE, sim_median_ci = TRUE),
+               vpc_theme = new_vpc_theme(update = list(
+                 sim_pi_fill = "#1A2B1A",
+                 sim_pi_alpha = 0.25,
+                 obs_ci_size = 1,
+                 obs_ci_color = "#1A2B1A",
+                 obs_median_color = "#1A2B1A",
+                 obs_ci_linetype = "dashed",
+                 sim_median_fill = "#1A2B1A",
+                 sim_median_alpha = 0.5)))+theme_bw()
+
+vpcPlot <- vpcPlotraw +
+  geom_point(data = xdata %>% filter(!is.na(DV)) %>% filter(EVID==0) , aes(x = TIME, y = DV), alpha = 0.1) +
+  scale_y_log10() +
+  labs(x = "Time, h",
+       y = "Plasma Drug Concentration, ug/mL") +
+  theme(text = element_text(size = 12), strip.background = element_blank(),
+        axis.text = element_text(size = 12))
+
+vpcPlot
+
+```
+
+
+```{r ppc_dens_overlay}
+
+color_scheme_set("brightblue")
+
+yrepCond1 <- as_draws_matrix(mod5_res$draws(variables = c("cCond"))) #individual
+yrepPred1 <- as_draws_matrix(mod5_res$draws(variables = c("cPred"))) #population
+
+yobs <- xdata$DV 
+
+ktore <- (xdata$CMT==1 & xdata$EVID==0)
+cefind <- bayesplot::ppc_dens_overlay(y = yobs[ktore], yrep = yrepCond1[1:50, ktore], adjust = 6) + xlim(0, 260) + labs(title = "CEFTOLOZANE", subtitle = "Individual Predictions") 
+cefpop <- bayesplot::ppc_dens_overlay(y = yobs[ktore], yrep = yrepPred1[1:50, ktore], adjust = 6) + xlim(0, 260) + legend_move("bottom") + labs(subtitle = "Population Predictions")
+
+ktore <- (xdata$CMT==3 & xdata$EVID==0)
+tazind <- bayesplot::ppc_dens_overlay(y = yobs[ktore], yrep = yrepCond1[1:50, ktore], adjust = 6) + xlim(0, 70) + legend_move("bottom") + labs(title = "TAZOBACTAM", subtitle = "Individual Predictions")
+tazpop <- bayesplot::ppc_dens_overlay(y = yobs[ktore], yrep = yrepPred1[1:50, ktore], adjust = 6) + xlim(0, 70) + legend_move("bottom") + labs(subtitle = "Population Predictions")
+
+cefall <- cefind + cefpop + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+cefall
+tazall <- tazind + tazpop + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+tazall
+
+```
+
+# GOF
+
+```{r GOF-stan}
+
+color_scheme_set("teal")
+
+ yobs <- xdata$DV
+
+ ktore <- xdata$CMT==1 & xdata$EVID==0
+ 
+ p1 <- bayesplot::ppc_intervals(y = 1000+yobs[ktore], yrep = yrepCond1[,ktore], x = yobs[ktore]) + 
+   xlab("Observed (ug/mL)") +
+   ylab("Individual predictions (ug/mL)") +
+   ggtitle("CEFTOLOZANE") +
+   scale_y_log10(limits = c(0.1, 200)) + 
+   scale_x_log10(limits = c(0.1, 200)) +
+   theme(legend.position = "none",text = element_text(size = 10),axis.title.x = element_blank(),axis.text = element_text(size = 8)) +
+   geom_abline(intercept = 0, slope = 1, color="grey", linetype="dotted")
+ 
+ p2 <-bayesplot::ppc_intervals(y = 1000+yobs[ktore], yrep = yrepPred1[,ktore], x = yobs[ktore]) +
+  xlab("Observed (ug/mL)") + 
+   ylab("Population predictions (ug/mL)") +
+   scale_y_log10(limits = c(0.1, 200)) +
+   scale_x_log10(limits = c(0.1, 200)) +
+  theme(legend.position = "none",text = element_text(size = 10),axis.text = element_text(size = 8)) +
+  geom_abline(intercept = 0, slope = 1, color="grey", linetype="dotted")
+ 
+ktore <- xdata$CMT==3 & xdata$EVID==0
+ p3 <- bayesplot::ppc_intervals(y = 1000+yobs[ktore], yrep = yrepCond1[,ktore], x = yobs[ktore]) + 
+   xlab("Observed (ug/mL)") +
+   ylab("Individual predictions (ug/mL)") +
+   ggtitle("TAZOBACTAM") +
+   scale_y_log10(limits = c(0.1, 200)) + 
+   scale_x_log10(limits = c(0.1, 200)) +
+   theme(legend.position = "none",text = element_text(size = 10), axis.title.x = element_blank(), axis.title.y = element_blank(), axis.text = element_text(size = 8)) +
+   geom_abline(intercept = 0, slope = 1, color="grey", linetype="dotted")
+ 
+ p4 <-bayesplot::ppc_intervals(y = 1000+yobs[ktore], yrep = yrepPred1[,ktore], x = yobs[ktore]) +
+  xlab("Observed (ug/mL)") + 
+   ylab("Population predictions (ug/mL)") +
+   scale_y_log10(limits = c(0.1, 200)) +
+   scale_x_log10(limits = c(0.1, 200)) +
+  theme(legend.position = "none",text = element_text(size = 10), axis.title.y = element_blank(), axis.text = element_text(size = 8)) +
+  geom_abline(intercept = 0, slope = 1, color="grey", linetype="dotted")
+ 
+ plotAll <- (p1+p3)/(p2+p4)
+
+ plotAll
+
+```
+
+# PTA
+
+```{r mod5gq}
+
+#copy_model_as_stan_gq(mod5)
+
+mod5gq  <- read_model(file.path(model_dir, "5_gq"))
+
+#open_standata_file(mod5)
+#check_stan_model(mod5)
+#mod5gq_res <- mod5gq %>% submit_model(.overwrite = FALSE) 
+
+mod5gq_res  <- read_model(file.path(model_dir, "5_gq")) %>%
+  read_fit_model()
+
+```
+
+
+```{r PTA dataset}
+
+pars <- c("thetaPredC", "thetaPredT")
+
+set.seed(123456)
+ptab1 <- posterior::as_draws_df(mod5gq_res$draws(c("thetaPredC"))) %>%
+  slice_sample(n = 1)%>%
+  tidybayes::spread_draws(thetaPredC[j, ID]) %>% 
+  pivot_wider(names_from = j, values_from = thetaPredC, names_prefix = "X") 
+
+set.seed(123456)
+ptab2 <- posterior::as_draws_df(mod5gq_res$draws(c("thetaPredT"))) %>%
+  slice_sample(n = 1)%>%
+  tidybayes::spread_draws(thetaPredT[j, ID])%>% 
+  mutate(j=j+5) %>%
+  pivot_wider(names_from = j, values_from = thetaPredT, names_prefix = "X") %>%
+  select(ID, X6:X10)
+
+ptab = cbind(ptab1, ptab2) %>%
+  rename(ID = ID...1) %>%
+  select(ID, X1:X10)
+
+nsubj <- nrow(ptab)
+
+# model name and location
+
+mod_no <- "5"
+dir_mod <- here("model/simod/basic")
+pk_mod <- mrgsolve::mread(file.path(dir_mod, mod_no))
+dt = 0.1
+
+presim_data_1 <- data.frame(
+  ID = 1:nsubj,
+  TIME = 0,
+  EVID = 1,
+  CMT = 1,
+  ADDL = 21,
+  AMT = 2,
+  II = 8) %>%
+  left_join(ptab) 
+
+presim_data_2<-presim_data_1 %>%
+  mutate(AMT=1, CMT=3)
+
+presim_data = rbind(presim_data_1,presim_data_2)%>%
+  arrange(ID, TIME, CMT)
+
+pk_sim_1 <- mrgsim_df(pk_mod,
+                    data = presim_data,
+                    add = c(seq(0,8,dt)+48),
+                    tad = T,
+                    recover = "ID")%>%
+  select(ID, TIME, TAD=tad, CEF, TAZ) %>%
+  mutate(Dose = "2 mg q8h") %>%
+  filter(TIME>=48 & TIME<48+8) %>%
+  tidyr::expand_grid(MIC = exp(seq(log(1/4), log(64), h = 64))) %>%
+  group_by(MIC,ID) %>%
+  summarise(TARGET = as.numeric((length(which(0.8*CEF*1000>=MIC)) * dt)>=0.3*8)) %>%
+  group_by(MIC) %>%
+  summarise(PTA = mean(TARGET))
+
+```
+
+
+```{r PTA function}
+
+# model name and location
+set.seed(123456)
+mod_no <- "5"
+dir_mod <- here("model/simod/basic")
+pk_mod <- mrgsolve::mread(file.path(dir_mod, mod_no))
+
+df_draws <- posterior::as_draws_df(mod5gq_res$draws(c("thetaPredC","thetaPredT")))
+
+sim_fun <- function(i, mod = pk_mod, df = df_draws, .tinf, .dosecef, .dosetaz, .ii = 8) {
+
+  set.seed(123456)
+  
+ptab1 <- df_draws %>%
+  filter(.draw == i)%>%
+  tidybayes::spread_draws(thetaPredC[j, ID]) %>% 
+  pivot_wider(names_from = j, values_from = thetaPredC, names_prefix = "X") 
+
+ptab2 <- df_draws %>%
+  filter(.draw == i)%>%
+  tidybayes::spread_draws(thetaPredT[j,ID])%>% 
+  mutate(j=j+5) %>%
+  pivot_wider(names_from = j, values_from = thetaPredT, names_prefix = "X") %>%
+  select(ID, X6:X10)
+
+ptab <- cbind(ptab1, ptab2) %>%
+  rename(ID = ID...1) %>%
+  select(ID, X1:X10)
+
+nsubj <- nrow(ptab)
+dt = 0.1
+
+presim_data_1 <- data.frame(
+  ID = 1:nsubj,
+  TIME = 0,
+  EVID = 1,
+  CMT = 1,
+  ADDL = 21,
+  AMT = .dosecef,
+  RATE = (.dosecef/.tinf),
+  II = .ii) %>%
+  left_join(ptab) 
+
+presim_data_2 <- presim_data_1 %>%
+  mutate(AMT = .dosetaz, 
+         CMT = 3, 
+         RATE = (.dosetaz/.tinf))
+
+presim_data <- rbind(presim_data_1, presim_data_2)%>%
+  arrange(ID, TIME, CMT)
+
+pk_sim_1 <- mrgsim_df(pk_mod,
+                    data = presim_data,
+                    add = c(seq(0, 8, dt) + 48),
+                    tad = T,
+                    recover = "ID")%>%
+  select(ID, TIME, TAD = tad, CEF, TAZ) %>%
+  filter(TIME >= 48 & TIME < 48 + 8) %>%
+  tidyr::expand_grid(MIC = exp(seq(log(1/4), log(64), length.out = 64))) %>%
+  group_by(MIC, ID) %>%
+  summarise(TARGET1 = (length(which(0.8 * CEF * 1000 >= MIC)) * dt) >= 0.3 * 8, ### CEF
+            TARGET2 = (length(which(0.7 * TAZ * 1000 >= 1)) * dt) >= 0.2 * 8) %>% ###TAZ 
+  group_by(MIC) %>%
+  summarise(PTA = mean(as.numeric(TARGET1 & TARGET2)),
+            PTAC = mean(as.numeric(TARGET1)),
+            PTAT = mean(as.numeric(TARGET2))) %>%
+  mutate(irep = i)
+}
+
+```
+
+## PTA plots
+
+### PTA of both drugs 
+
+```{r PTA of both}
+
+set.seed(123456)
+plan(multisession, workers = 12)
+
+out1 <- future_map(1:250, sim_fun, mod = pk_mod, df = df_draws, .tinf = 3, .dosecef = 2, .dosetaz = 1) %>%
+  bind_rows()
+
+pta_data1 <- function(data) {
+  data %>%
+  group_by(MIC) %>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05), 
+            myc = median(PTAC),
+            hyc = quantile(PTAC, probs = 0.95),
+            lyc = quantile(PTAC, probs = 0.05), 
+            myt = median(PTAT),
+            hyt = quantile(PTAT, probs = 0.95),
+            lyt = quantile(PTAT, probs = 0.05))
+}
+
+plot_pta1 <- function(sumdata) {
+  ggplot(sumdata, aes(x = MIC)) +
+  geom_line(aes(y = my, color = "PTA")) +
+  geom_ribbon(aes(ymin = ly, ymax = hy, fill = "PTA"), alpha = 0.25) +
+  geom_line(aes(y = myc, color = "PTA-CEF")) +
+  geom_ribbon(aes(ymin = lyc, ymax = hyc, fill = "PTA-CEF"), alpha = 0.25) +
+  geom_line(aes(y = myt, color = "PTA-TAZ")) +
+  geom_ribbon(aes(ymin = lyt, ymax = hyt, fill = "PTA-TAZ"), alpha = 0.25) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  scale_color_manual(values = c("PTA" = "#5A8099", "PTA-CEF" = "#3C4F2F", "PTA-TAZ" = "#7A3C4A")) +
+  scale_fill_manual(values = c("PTA" = "#5A8099", "PTA-CEF" = "#3C4F2F", "PTA-TAZ" = "#7A3C4A")) +
+  labs(color = NULL, fill = NULL) +  
+  theme(legend.position = "bottom", plot.subtitle = element_text(size = 10, color = "gray20"))
+}
+
+pta_all1 <- pta_data1(out1)
+plot_pta1(pta_all1)
+
+pta_filtered1 <- pta_data1(out1 %>% filter(MIC > 4))
+plot_pta1(pta_filtered1)
+
+```
+
+### PTA in different time of infusion 
+
+```{r PTA by tinf}
+
+set.seed(123456)
+plan(multisession, workers = 12)
+
+out2 <- future_map(1:250, sim_fun, mod = pk_mod, df = df_draws, .tinf = 1, .dosecef = 2, .dosetaz = 1) %>%
+  bind_rows()
+
+out10 <- out1 %>% mutate(type = "3h, dose = 3g")
+out20 <- out2 %>% mutate(type = "1h, dose = 3g")
+
+out <- rbind(out10, out20)
+
+pta_data2 <- function(data) {
+  data %>%  
+  group_by(MIC, type)%>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05))
+  }
+
+plot_pta2 <- function(sumdata) {
+  ggplot(sumdata) +
+  geom_line(aes(x = MIC, y = my, color = type)) +
+  geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, color = type, fill = type), alpha = 0.2) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment - time infusion", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+  scale_color_manual(values = c("3h, dose = 3g" = "#007F7F", "1h, dose = 3g" = "#D95F02")) +
+  scale_fill_manual(values = c("3h, dose = 3g" = "#007F7F", "1h, dose = 3g" = "#D95F02")) +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.subtitle = element_text(size = 10, color = "gray20")) 
+  }
+
+pta_all2 <- pta_data2(out)
+plot_pta2(pta_all2)
+
+pta_filtered2 <- pta_data2(out %>% filter(MIC > 4))
+plot_pta2(pta_filtered2)
+
+```
+
+### PTA by dose and time of infusion
+
+```{r PTA by dose}
+
+set.seed(123456)
+plan(multisession, workers = 12)
+
+out3 <- future_map(1:250, sim_fun, mod = pk_mod, df = df_draws, .tinf = 3, .dosecef = 1, .dosetaz = 0.5) %>%
+  bind_rows()
+out4 <- future_map(1:250, sim_fun, mod = pk_mod, df = df_draws, .tinf = 1, .dosecef = 1, .dosetaz = 0.5) %>%
+  bind_rows()
+
+out10 <- out1 %>% mutate(dose = "3g q8h tinf=3h")
+out20 <- out2 %>% mutate(dose = "3g q8h tinf=1h")
+out30 <- out3 %>% mutate(dose = "1.5g q8h, tinf=3h")
+out40 <- out4 %>% mutate(dose = "1.5g q8h, tinf=1h")
+out <-  rbind(out10, out20, out30, out40)
+
+pta_data3 <- function(data) {
+  data %>%  
+  group_by(MIC, dose)%>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05))
+}
+
+plot_pta3 <- function(sumdata) {
+  ggplot(sumdata) +
+  geom_line(aes(x = MIC, y = my, color = dose)) +
+  geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, color = dose, fill = dose), alpha = 0.2) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment - dose", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+  scale_color_manual(values = c("3g q8h tinf=3h" = "#004545","3g q8h tinf=1h" = "#007F7F", "1.5g q8h, tinf=3h" = "#B24D02", "1.5g q8h, tinf=1h" = "#C99A47")) +
+  scale_fill_manual(values = c("3g q8h tinf=3h" = "#004545","3g q8h tinf=1h" = "#007F7F", "1.5g q8h, tinf=3h" = "#B24D02", "1.5g q8h, tinf=1h" = "#C99A47")) +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.subtitle = element_text(size = 10, color = "gray20")) 
+  }
+
+pta_all3 <- pta_data3(out)
+plot_pta3(pta_all3)
+
+pta_filtered3 <- pta_data3(out %>% filter(MIC > 4))
+plot_pta3(pta_filtered3)
+
+```
+
+## 1CMT 
+
+```{r 1CMT}
+
+runno = "100"
+nrep = 500 # number of parameter sets 
+
+nm_dir = here::here("model/nonmem/basic")
+nm_mod <- bbr::read_model(file.path(nm_dir, runno))
+
+#' Load the mrgsolve model
+model_dir <- "model/simod/basic"
+mod <- mread(here::here(model_dir, runno))
+
+```
+
+### Generate parameter sets
+
+```{r parameter sets 1cmt}
+
+set.seed(123456)
+#' Generate 500 parameter sets by sampling from variance-covariance matrix for fixed and random effect parameter estimates of the final ppk model
+
+set_parset_pk <- function(modelName = runno, nsim=nsim){
+  .est <- mrgsolve::read_nmext(modelName, project = nm_dir) #retrieves NONMEM estimates for use in the mrgsolve model when $NMEXT or $NMXML is invoked
+  .cov <- read.table(file=file.path(nm_dir, modelName, paste0(modelName, ".cov")),
+                     skip=1, header=T) # retrieve the full variance-covariance error matrix for THETA, OMEGA and SIGMA
+  .cov$NAME <- NULL
+  take <- grep ("THETA", names(.cov))
+  .cov <- .cov[take, take] # keeps only the THETAs
+  theta <- .est$param #Get the point estimates of THETAs
+ # omega <- .est$raw[grepl("OMEGA", names(.est$raw))]
+  omega <- as_bmat(.est,"OMEGA") #Get the estimates of OMEGA matrix
+ # sigma <- .est$raw[grepl("SIGMA", names(.est$raw))]
+  sigma <- as_bmat(.est, "SIGMA") #Get the estimates of SIGMA matrix
+  # get the number of observations and number of subjects
+  summ = nm_mod %>% model_summary()
+  nObsUsed <- as.numeric(summ$run_details$number_of_obs)
+  nSubsUsed <- as.numeric(summ$run_details$number_of_subjects)
+  set.seed(123456)
+  # Create Parameters for Simulation with Uncertainty
+  pkparset <- simpar(nsim=nsim, 
+                 digits=5, 
+                 theta=unlist(theta), 
+                 cov=.cov, 
+                 omega=omega,
+                 sigma=sigma, 
+                 odf=nSubsUsed,
+                 sdf=floor((nSubsUsed + nObsUsed)/2)) %>% as.data.frame()
+  return (pkparset)
+}
+set.seed(123456)
+
+pkparset <- set_parset_pk(modelName = runno, nsim=500) %>% mutate(rep=1:n()) 
+post <- pkparset %>%
+  rename_with(~ gsub("TH\\.", "THETA", .x), starts_with("TH.")) %>%
+  rename_with(~ gsub("OM", "OMEGA", .x), starts_with("OM")) %>%
+  rename_with(~ gsub("SG", "SIGMA", .x), starts_with("SG")) %>% 
+  rename_with(~ gsub("\\.", "", .x), starts_with("OM")) %>%
+  rename_with(~ gsub("\\.", "", .x), starts_with("SI")) %>% 
+  mutate(iter = row_number())
+
+```
+
+
+```{r 1CMT function}
+
+sim_fun_1cmt <- function(i, mod = mod, df = post, .tinf, .dosecef, .dosetaz, .ii = 8) {
+
+ptab <- df[i,]
+
+Omega = as_bmat(list(OMEGA1.1=ptab$OMEGA11,
+     OMEGA2.1=ptab$OMEGA21,
+     OMEGA2.2=ptab$OMEGA22,
+     OMEGA3.1=ptab$OMEGA31, 
+     OMEGA3.2=ptab$OMEGA32, 
+     OMEGA3.3=ptab$OMEGA33), "OMEGA")
+
+nsubj <- 250
+dt = 0.1
+
+presim_data_1 <- data.frame(
+  ID = 1:nsubj,
+  TIME = 0,
+  EVID = 1,
+  CMT = 1,
+  ADDL = 21,
+  AMT = .dosecef,
+  RATE = (.dosecef/.tinf),
+  II = .ii) 
+
+presim_data_2 <- presim_data_1 %>%
+  mutate(AMT = .dosetaz, 
+         CMT = 3, 
+         RATE = (.dosetaz/.tinf))
+
+presim_data <- rbind(presim_data_1, presim_data_2)%>%
+  arrange(ID, TIME, CMT)
+
+mod = mod %>% omat(Omega) %>% update(param = list(THETA1 = ptab$THETA1,
+                                     THETA2 = ptab$THETA2,
+                                     THETA3 = ptab$THETA3,
+                                     THETA4 = ptab$THETA4,
+                                     THETA5 = ptab$THETA5))
+
+pk_sim_1 <- mrgsim_df(mod,
+                    data = presim_data,
+                    add = c(seq(0, 8, dt) + 48),
+                    tad = T,
+                    recover = "ID")%>%
+  select(ID, TIME, TAD = tad, CEF, TAZ) %>%
+  filter(TIME >= 48 & TIME < 48 + 8) %>%
+  tidyr::expand_grid(MIC = exp(seq(log(1/4), log(64), length.out = 64))) %>%
+  group_by(MIC, ID) %>%
+  summarise(TARGET1 = (length(which(0.8 * CEF * 1000 >= MIC)) * dt) >= 0.3 * 8, ### CEF
+            TARGET2 = (length(which(0.7 * TAZ * 1000 >= 1)) * dt) >= 0.2 * 8) %>% ###TAZ 
+  group_by(MIC) %>%
+  summarise(PTA = mean(as.numeric(TARGET1 & TARGET2)),
+            PTAC = mean(as.numeric(TARGET1)),
+            PTAT = mean(as.numeric(TARGET2))) %>%
+  mutate(irep = i)
+}
+
+```
+
+## PTA plots
+
+### PTA of 3g drugs by type of analysis
+
+```{r compare PTAs}
+
+set.seed(123456)
+plan(multisession, workers = 12)
+
+out1cmt1 <- future_map(1:250, sim_fun_1cmt, mod = mod, df = post, .tinf = 3, .dosecef = 2, .dosetaz = 1) %>%
+  bind_rows()
+out2cmt1 <- future_map(1:250, sim_fun_1cmt, mod = mod, df = post, .tinf = 1, .dosecef = 2, .dosetaz = 1) %>%
+  bind_rows()
+
+out10 <- out1 %>% mutate(dose = "3g q8h tinf=3h BAYES")
+out20 <- out2 %>% mutate(dose = "3g q8h tinf=1h BAYES")
+out30 <- out1cmt1 %>% mutate(dose = "3g q8h tinf=3h 1CMT")
+out40 <- out2cmt1 %>% mutate(dose = "3g q8h tinf=1h 1CMT")
+out <-  rbind(out10, out20, out30, out40)
+
+pta_data4 <- function(data) {
+  data %>%  
+  group_by(MIC, dose)%>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05))
+}
+
+plot_pta4 <- function(sumdata) {
+  ggplot(sumdata) +
+  geom_line(aes(x = MIC, y = my, color = dose)) +
+  geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, color = dose, fill = dose), alpha = 0.2) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment - dose", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+  scale_color_manual(values = c("3g q8h tinf=3h BAYES" = "#004545","3g q8h tinf=1h BAYES" = "#007F7F", "3g q8h tinf=3h 1CMT" = "#3A2E4D", "3g q8h tinf=1h 1CMT" = "#675A82")) +
+  scale_fill_manual(values = c("3g q8h tinf=3h BAYES" = "#004545","3g q8h tinf=1h BAYES" = "#007F7F", "3g q8h tinf=3h 1CMT" = "#3A2E4D", "3g q8h tinf=1h 1CMT" = "#675A82")) +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.subtitle = element_text(size = 10, color = "gray20"), legend.text = element_text(size = 8)) +
+  guides(fill = guide_legend(nrow = 2),
+         color = guide_legend(nrow=2)) 
+  }
+
+pta_all4 <- pta_data4(out)
+plot_pta4(pta_all4)
+
+pta_filtered4 <- pta_data4(out %>% filter(MIC > 4))
+plot_pta4(pta_filtered4)
+
+```
+
+### PTA in tinf = 12h by  type of analysis
+
+```{r PTA tinf 12h}
+
+set.seed(123456)
+plan(multisession, workers = 12)
+
+out6bayes <- future_map(1:250, sim_fun, mod = pk_mod, df = df_draws, .tinf = 3, .dosecef = 2, .dosetaz = 1, .ii = 12) %>%
+  bind_rows()
+out7cmt1 <- future_map(1:250, sim_fun_1cmt, mod = mod, df = post, .tinf = 3, .dosecef = 2, .dosetaz = 1, .ii = 12) %>%
+  bind_rows()
+
+out60 <- out6bayes %>% mutate(dose = "3g q12h tinf=3h BAYES")
+out70 <- out7cmt1 %>% mutate(dose = "3g q12h tinf=3h 1CMT")
+out <-  rbind(out60, out70)
+
+pta_data5 <- function(data) {
+  data %>%  
+  group_by(MIC, dose)%>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05))
+}
+
+plot_pta5 <- function(sumdata) {
+  ggplot(sumdata) +
+  geom_line(aes(x = MIC, y = my, color = dose)) +
+  geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, color = dose, fill = dose), alpha = 0.3) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment - dose", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+  scale_color_manual(values = c("3g q12h tinf=3h BAYES" = "#5A2E3A","3g q12h tinf=3h 1CMT" = "#2F4A3D")) +
+  scale_fill_manual(values = c("3g q12h tinf=3h BAYES" = "#5A2E3A","3g q12h tinf=3h 1CMT" = "#2F4A3D")) +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.subtitle = element_text(size = 10, color = "gray20"))
+  }
+
+pta_all5 <- pta_data5(out)
+plot_pta5(pta_all5)
+
+pta_filtered5 <- pta_data5(out %>% filter(MIC > 4))
+plot_pta5(pta_filtered5)
+
+```
+
+# Bootstrap
+
+## 1CMT
+
+```{r bootstrap paths}
+
+BS_DIR <- here::here("model/nonmem/bootstrap/bs")
+BS_DATA_DIR <- here::here(BS_DIR, "data")
+
+if(!dir.exists(BS_DIR)) dir.create(BS_DIR)
+if(!dir.exists(BS_DATA_DIR)) dir.create(BS_DATA_DIR)
+
+```
+
+
+```{r bootstrap function to make data, eval = FALSE}
+
+template_ctl <- readLines(
+  file.path(BS_DIR, "100bs.mod")
+)
+
+RUN <- seq(500) 
+
+set.seed(123456)
+
+nmdata <- xdata
+
+make_boot_run <- function(n, data, template, boot_dir, strat_cols = NULL, 
+                          overwrite = FALSE,  seed = 123456){
+  
+  if (n %% 10 == 0) message(glue("Created {n} bootstrap data sets"))
+  mod_name <- str_pad(paste0(n), width=3, pad="0")
+  
+  mod_path <- glue("{boot_dir}/{mod_name}")
+  
+  if(file.exists(paste0(mod_path, ".yaml")) && !overwrite) {
+    return(read_model(mod_path))
+  }
+  
+    data_new <- resample_df(
+     data,
+     key_cols = "ID",
+     strat_cols = strat_cols)
+
+  data_new <- rename(data_new, OID = ID, ID = KEY)
+  data_new <- select(data_new, unique(c(names(data), "OID")))
+  csv_file <- glue("{boot_dir}/data/{mod_name}.csv")
+  fwrite(data_new, csv_file , na = '.', quote = FALSE, col.names = FALSE )
+  new_ctl <- whisker.render(template, list(run_num = mod_name))
+  write_file(new_ctl, file = paste0(mod_path, ".ctl"))
+  
+  mod <- new_model(
+    mod_path,
+    .description = glue("bootstrap {mod_name}"), 
+    .overwrite = overwrite)
+  
+  mod
+}
+
+models <- map(
+  RUN, 
+  data = nmdata, 
+  .f = make_boot_run, 
+  template = template_ctl, 
+  boot_dir = BS_DIR, 
+  strat_cols = NULL,
+  overwrite = FALSE #set TRUE to run models and create datasets
+)
+
+```
+
+
+```{r bootstrap submit models, eval = FALSE}
+
+set.seed(123456)
+
+#bbi.yaml file needs to be in bs folder
+
+heavt_comp <- function(x) {
+  options(bbr.bbi_exe_path = "C:/Users/pauoku/AppData/Roaming/bbi/bbi.exe")  ### need to be changed to your directory
+
+  out <- bbr::submit_models(
+  models[x],
+  .config_path = here::here("model/nonmem/bootstrap/bs/bbi.yaml"),
+  .bbi_args = list(overwrite = F, threads = 1)
+)
+}
+########### NEED TO BE RUN IF YOU WANT TO CHECK #############
+# cl <- makeCluster(detectCores())
+# clusterExport(cl, "models")
+# results_par <- parLapply(cl, RUN, heavt_comp)
+```
+
+### Summary of parameter estimates:
+
+```{r bootstrap summary}
+
+boot <- param_estimates_batch(BS_DIR)
+err <- filter(boot, !is.na(error_msg))
+nrow(err)
+         
+```
+### Generate parameter sets
+
+```{r bootstrap parameters set}
+
+set.seed(123456)
+
+post <- boot %>%
+  rename_with(~ gsub("\\(|\\)|,", "", .x), starts_with("OMEGA")) %>%
+  rename_with(~ gsub("\\(|\\)|,", "", .x), starts_with("SIGMA")) %>% 
+  mutate(iter = row_number()) %>% 
+  select(-c(error_msg, termination_code, absolute_model_path))
+
+```
+
+
+```{r bootstrap function}
+
+sim_fun_boot <- function(i, mod = mod, df = post, .tinf, .dosecef, .dosetaz, .ii = 8) {
+
+ptab <- df[i,]
+
+omega_values <- c(
+    ptab$OMEGA11, ptab$OMEGA21, ptab$OMEGA22,
+    ptab$OMEGA31, ptab$OMEGA32, ptab$OMEGA33
+  )
+  if (any(is.na(omega_values))) {
+    warning("Missing OMEGA values for iteration ", i)
+    return(NULL) 
+  }
+
+Omega = as_bmat(list(OMEGA1.1=ptab$OMEGA11,
+     OMEGA2.1=ptab$OMEGA21,
+     OMEGA2.2=ptab$OMEGA22,
+     OMEGA3.1=ptab$OMEGA31, 
+     OMEGA3.2=ptab$OMEGA32, 
+     OMEGA3.3=ptab$OMEGA33), "OMEGA")
+
+omega_det <- det(Omega)
+  if (is.na(omega_det) || omega_det <= 0) {
+    warning("Invalid Omega matrix: determinant is NA or <= 0 for iteration ", i)
+    return(NULL) 
+  }
+
+nsubj <- 250
+dt = 0.1
+
+presim_data_1 <- data.frame(
+  ID = 1:nsubj,
+  TIME = 0,
+  EVID = 1,
+  CMT = 1,
+  ADDL = 21,
+  AMT = .dosecef,
+  RATE = (.dosecef/.tinf),
+  II = .ii) 
+
+presim_data_2 <- presim_data_1 %>%
+  mutate(AMT = .dosetaz, 
+         CMT = 3, 
+         RATE = (.dosetaz/.tinf))
+
+presim_data <- rbind(presim_data_1, presim_data_2)%>%
+  arrange(ID, TIME, CMT)
+
+mod = mod %>% omat(Omega) %>% update(param = list(THETA1 = ptab$THETA1,
+                                     THETA2 = ptab$THETA2,
+                                     THETA3 = ptab$THETA3,
+                                     THETA4 = ptab$THETA4,
+                                     THETA5 = ptab$THETA5))
+
+ifelse(det(Omega) <= 0, NA, det(Omega))
+
+pk_sim_1 <- mrgsim_df(mod,
+                    data = presim_data,
+                    add = c(seq(0, 8, dt) + 48),
+                    tad = T,
+                    recover = "ID")%>%
+  select(ID, TIME, TAD = tad, CEF, TAZ) %>%
+  filter(TIME >= 48 & TIME < 48 + 8) %>%
+  tidyr::expand_grid(MIC = exp(seq(log(1/4), log(64), length.out = 64))) %>%
+  group_by(MIC, ID) %>%
+  summarise(TARGET1 = (length(which(0.8 * CEF * 1000 >= MIC)) * dt) >= 0.3 * 8, ### CEF
+            TARGET2 = (length(which(0.7 * TAZ * 1000 >= 1)) * dt) >= 0.2 * 8) %>% ### TAZ 
+  group_by(MIC) %>%
+  summarise(PTA = mean(as.numeric(TARGET1 & TARGET2)),
+            PTAC = mean(as.numeric(TARGET1)),
+            PTAT = mean(as.numeric(TARGET2))) %>%
+  mutate(irep = i)
+}
+
+```
+
+### Params table
+
+```{r bs1cmt params}
+
+set.seed(123456)
+
+calc_stats <- function(x) {
+  mean_val <- mean(x, na.rm = TRUE)
+  sd_val <- sd(x, na.rm = TRUE)
+  ci <- quantile(x, probs = c(0.025, 0.975), na.rm = TRUE) # 95% CI
+  rse <- sd_val / mean_val
+  cv <- (sd_val / mean_val) * 100
+
+   tibble(
+    Mean = round(mean_val, 3),
+    SD = round(sd_val, 3),
+    `95%CI Lower` = round(ci[1], 3),
+    `95%CI Upper` = round(ci[2], 3),
+    RSE = round(rse, 3),
+    `CV%` = round(cv, 3)
+  )
+}
+
+head(post)
+
+model_dir <- here::here("model/nonmem/basic")
+model_run <- 100
+
+key <- yaml_as_df(here::here(model_dir, model_run, "parm.yaml"))
+
+params_df <- as.data.frame(post) %>% 
+  select(starts_with("THETA"), starts_with("OMEGA"), starts_with("SIGMA"))
+
+params_long <- params_df %>%
+  pivot_longer(cols = everything(), names_to = "name", values_to = "Value") %>%
+  left_join(key, by = "name")
+
+param_df <- params_long %>%
+  group_by(name, abb, panel) %>%
+  summarise(
+    Mean_raw = mean(Value, na.rm = TRUE),
+    SD_raw = sd(Value, na.rm = TRUE),
+    Lower_raw = quantile(Value, 0.025, na.rm = TRUE),
+    Upper_raw = quantile(Value, 0.975, na.rm = TRUE),
+    RSE_raw = SD_raw / Mean_raw * 100,
+    .groups = "drop") %>%
+  mutate(Mean = case_when(
+    grepl("THETA", name) ~ round(Mean_raw, 2),
+    panel == "RV" ~ round(Mean_raw, 4),
+    TRUE ~ round(Mean_raw, 3)),
+    SD = case_when(
+      grepl("THETA", name) ~ round(SD_raw, 2),
+      panel == "RV" ~ round(SD_raw, 4),
+      TRUE ~ round(SD_raw, 3)),
+    Lower = case_when(
+      grepl("THETA", name) ~ round(Lower_raw, 2),
+      panel == "RV" ~ round(Lower_raw, 4),
+      TRUE ~ round(Lower_raw, 3)),
+    Upper = case_when(
+      grepl("THETA", name) ~ round(Upper_raw, 2),
+      panel == "RV" ~ round(Upper_raw, 4),
+      TRUE ~ round(Upper_raw, 3)),
+    RSE = case_when(
+      grepl("THETA", name) ~ round(RSE_raw, 2),
+      panel == "RV" ~ round(RSE_raw, 4),
+      TRUE ~ round(RSE_raw, 3)),
+    `95% CI` = paste0("[", Lower, ", ", Upper, "]")) %>%
+  select(type = panel, Parameter = abb, Mean, SD, `95% CI`, RSE) %>%
+  na.omit()
+
+panel_order <- c("struct", "IIV", "RV")
+param_df <- param_df %>%
+  mutate(type = factor(type, levels = panel_order)) %>%
+  arrange(type, Parameter)
+
+png_table <- param_df %>%
+  st_new() %>%
+  st_panel("type", duplicates_ok = TRUE) %>%
+  st_center(Parameter = "l") %>%
+  stable() %>%
+  st_as_image()
+
+png_table
+
+```
+
+## PTA final plots
+
+### PTA in tinf = 8h by type of analysis
+
+```{r q8h pta plot}
+
+plan(multisession, workers = 12)
+
+out1boot <- future_map(1:250, sim_fun_boot, mod = mod, df = post, .tinf = 3, .dosecef = 2, .dosetaz = 1, .options = furrr_options(seed = TRUE)) %>%
+  bind_rows()
+
+out10 <- out1 %>% mutate(dose = "3g q8h tinf=3h 2CMT BAYES")
+out30 <- out1cmt1 %>% mutate(dose = "3g q8h tinf=3h 1CMT COVARIANCE")
+out50 <- out1boot %>% mutate(dose = "3g q8h tinf=3h 1CMT BOOTSTRAP")
+out <-  rbind(out10, out30, out50)
+
+pta_data6 <- function(data) {
+  data %>%  
+  group_by(MIC, dose)%>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05))
+}
+
+statistics <- out %>% 
+  group_by(dose, irep) %>%  
+  summarise(MIC90=interp1(PTA, MIC, .9)) %>% 
+  ungroup() %>% 
+  group_by(dose) %>%  
+  summarise(my = median(MIC90),
+            hy = quantile(MIC90, probs = 0.95),
+            ly = quantile(MIC90, probs = 0.05)) %>% 
+  mutate(across(where(is.numeric), round, 2))
+
+statistics
+
+plot_pta6 <- function(sumdata) {
+  ggplot(sumdata) +
+  geom_line(aes(x = MIC, y = my, color = dose)) +
+  geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, color = dose, fill = dose), alpha = 0.2) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment - 3g q8h", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+  scale_color_manual(values = c("3g q8h tinf=3h 2CMT BAYES" = "#3A5F2F", "3g q8h tinf=3h 1CMT COVARIANCE" = "#7A1C2B", "3g q8h tinf=3h 1CMT BOOTSTRAP" = "#E6B12C")) +
+  scale_fill_manual(values = c("3g q8h tinf=3h 2CMT BAYES" = "#3A5F2F", "3g q8h tinf=3h 1CMT COVARIANCE" = "#7A1C2B", "3g q8h tinf=3h 1CMT BOOTSTRAP" = "#E6B12C")) +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.subtitle = element_text(size = 10, color = "gray20"), legend.text = element_text(size = 8)) #+
+ # guides(fill = guide_legend(nrow = 2),
+ #        color = guide_legend(nrow=2))
+  }
+
+pta_all6 <- pta_data6(out)
+plot_pta6(pta_all6)
+
+pta_filtered6 <- pta_data6(out %>% filter(MIC > 4))
+plot_pta6(pta_filtered6)
+
+```
+
+
+```{r q8h pta plot facet}
+
+plot_pta_facet <- function(sumdata) {
+
+  doses_plot1 <- c("3g q8h tinf=3h 2CMT BAYES",
+                   "3g q8h tinf=3h 1CMT COVARIANCE")
+
+  doses_plot2 <- c("3g q8h tinf=3h 2CMT BAYES",
+                   "3g q8h tinf=3h 1CMT BOOTSTRAP")
+
+  df1 <- sumdata %>% filter(dose %in% doses_plot1) %>%
+    mutate(dose = str_replace(dose, " tinf=3h ", " tinf=3h\n"))  
+  df2 <- sumdata %>% filter(dose %in% doses_plot2) %>%
+    mutate(dose = str_replace(dose, " tinf=3h ", " tinf=3h\n"))
+  
+  plot1 <- ggplot(df1) +
+    geom_line(aes(x = MIC, y = my, color = dose)) +
+    geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, fill = dose), alpha = 0.2) +
+    geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") + labs(x = "MIC", y = "PTA") +
+    # labs(title = "Probability of target attainment - 3g q8h",
+    #      subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml",
+    #      x = "MIC", y = "PTA") +
+   scale_color_manual(values = c("3g q8h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                  "3g q8h tinf=3h\n1CMT COVARIANCE"="#7A1C2B"),
+                       name = NULL) +
+    scale_fill_manual(values = c("3g q8h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                 "3g q8h tinf=3h\n1CMT COVARIANCE"="#7A1C2B"),
+                      name = NULL) +
+    scale_x_continuous(transform = "log2", breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+    scale_y_continuous(breaks = seq(0, 1, 0.2)) 
+
+   plot2 <- ggplot(df2) +
+     geom_line(aes(x = MIC, y = my, color = dose)) +
+     geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, fill = dose), alpha = 0.2) +
+     geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") + labs(x = "MIC", y = "PTA") +
+     # labs(title = "Probability of target attainment - 3g q8h",
+     #      subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml",
+     #      x = "MIC", y = "PTA") +
+      scale_color_manual(values = c("3g q8h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                  "3g q8h tinf=3h\n1CMT BOOTSTRAP"="#E6B12C"),
+                       name = NULL) +
+    scale_fill_manual(values = c("3g q8h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                 "3g q8h tinf=3h\n1CMT BOOTSTRAP"="#E6B12C"),
+                      name = NULL) +
+     scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+     scale_y_continuous(breaks = seq(0, 1, 0.2)) 
+ 
+ combined <- (plot1 | plot2) &        
+  plot_annotation(
+    title = "Probability of Target Attainment - 3g q8h",
+    subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml") &
+   theme(legend.position = "bottom", 
+         legend.title = element_blank(), 
+         plot.subtitle = element_text(size = 9, color = "gray20"),
+         legend.text = element_text(size = 8)) & plot_layout(guides = "collect")
+ 
+  return(combined) 
+}
+
+sumdata <- pta_data6(out)
+
+pta_all_facet <- plot_pta_facet(sumdata)
+pta_all_facet
+
+pta_filtered_facet <- plot_pta_facet(sumdata %>% filter(MIC > 4))
+pta_filtered_facet
+
+```
+
+### PTA in tinf = 12h by type of analysis
+
+```{r PTA tinf 12h bs}
+
+plan(multisession, workers = 12)
+
+out2boot <- future_map(1:250, sim_fun_boot, mod = mod, df = post, .tinf = 3, .dosecef = 2, .dosetaz = 1, .ii = 12) %>%
+  bind_rows()
+
+out60 <- out6bayes %>% mutate(dose = "3g q12h tinf=3h 2CMT BAYES")
+out70 <- out7cmt1 %>% mutate(dose = "3g q12h tinf=3h 1CMT COVARIANCE")
+out80 <- out2boot %>% mutate(dose = "3g q12h tinf=3h 1CMT BOOTSTRAP")
+out <-  rbind(out60, out70, out80)
+
+pta_data7 <- function(data) {
+  data %>%  
+  group_by(MIC, dose)%>%
+  summarise(my = median(PTA),
+            hy = quantile(PTA, probs = 0.95),
+            ly = quantile(PTA, probs = 0.05))
+}
+
+statistics <- out %>% 
+  group_by(dose, irep) %>%  
+  summarise(MIC90=interp1(PTA, MIC, .9)) %>% 
+  ungroup() %>% 
+  group_by(dose) %>%  
+  summarise(my = median(MIC90),
+            hy = quantile(MIC90, probs = 0.95),
+            ly = quantile(MIC90, probs = 0.05))  %>% 
+  mutate(across(where(is.numeric), round, 2))
+
+statistics
+
+plot_pta7 <- function(sumdata) {
+  ggplot(sumdata) +
+  geom_line(aes(x = MIC, y = my, color = dose)) +
+  geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, color = dose, fill = dose), alpha = 0.3) +
+  geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") +
+  labs(title = "Probability of target attainment - 3g q12h", 
+       subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml", 
+       x = "MIC", y = "PTA")  +
+ scale_color_manual(values = c("3g q12h tinf=3h 2CMT BAYES" = "#3A5F2F", "3g q12h tinf=3h 1CMT COVARIANCE" = "#7A1C2B", "3g q12h tinf=3h 1CMT BOOTSTRAP" = "#E6B12C")) +
+scale_fill_manual(values = c("3g q12h tinf=3h 2CMT BAYES" = "#3A5F2F", "3g q12h tinf=3h 1CMT COVARIANCE" = "#7A1C2B", "3g q12h tinf=3h 1CMT BOOTSTRAP" = "#E6B12C")) +
+  scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  theme(legend.position = "bottom", legend.title = element_blank(), plot.subtitle = element_text(size = 10, color = "gray20"),  legend.text = element_text(size = 8))  
+  }
+
+pta_all7 <- pta_data7(out)
+plot_pta7(pta_all7)
+
+pta_filtered7 <- pta_data7(out %>% filter(MIC > 4))
+plot_pta7(pta_filtered7)
+
+```
+
+```{r q12h pta plot facet}
+
+plot_pta_facet2 <- function(sumdata) {
+
+  doses_plot1 <- c("3g q12h tinf=3h 2CMT BAYES",
+                   "3g q12h tinf=3h 1CMT COVARIANCE")
+
+  doses_plot2 <- c("3g q12h tinf=3h 2CMT BAYES",
+                   "3g q12h tinf=3h 1CMT BOOTSTRAP")
+
+  df1 <- sumdata %>% filter(dose %in% doses_plot1) %>%
+    mutate(dose = str_replace(dose, " tinf=3h ", " tinf=3h\n"))  
+  df2 <- sumdata %>% filter(dose %in% doses_plot2) %>%
+    mutate(dose = str_replace(dose, " tinf=3h ", " tinf=3h\n"))
+  
+  plot1 <- ggplot(df1) +
+    geom_line(aes(x = MIC, y = my, color = dose)) +
+    geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, fill = dose), alpha = 0.2) +
+    geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") + labs(x = "MIC", y = "PTA") +
+    # labs(title = "Probability of target attainment - 3g q12h",
+    #      subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml",
+    #      x = "MIC", y = "PTA") +
+  scale_color_manual(values = c("3g q12h tinf=3h\n2CMT BAYES"="#3A5F2F",  
+                                  "3g q12h tinf=3h\n1CMT COVARIANCE"="#7A1C2B"),
+                       name = NULL) +
+    scale_fill_manual(values = c("3g q12h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                 "3g q12h tinf=3h\n1CMT COVARIANCE"="#7A1C2B"),
+                      name = NULL) +  
+    scale_x_continuous(transform = "log2", breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+    scale_y_continuous(breaks = seq(0, 1, 0.2)) 
+  
+   plot2 <- ggplot(df2) +
+     geom_line(aes(x = MIC, y = my, color = dose)) +
+     geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, fill = dose), alpha = 0.2) +
+     geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") + labs(x = "MIC", y = "PTA") +
+     # labs(title = "Probability of target attainment - 3g q12h",
+     #      subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml",
+     #      x = "MIC", y = "PTA") +
+      scale_color_manual(values = c("3g q12h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                  "3g q12h tinf=3h\n1CMT BOOTSTRAP"="#E6B12C"),
+                       name = NULL) + 
+    scale_fill_manual(values = c("3g q12h tinf=3h\n2CMT BAYES"="#3A5F2F",
+                                 "3g q12h tinf=3h\n1CMT BOOTSTRAP"="#E6B12C"),
+                      name = NULL) +
+     scale_x_continuous(transform = "log2",breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+     scale_y_continuous(breaks = seq(0, 1, 0.2))
+
+ combined <- (plot1 | plot2) &        
+  plot_annotation(
+    title = "Probability of Target Attainment - 3g q12h",
+    subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml") &
+   theme(legend.position = "bottom", 
+         legend.title = element_blank(), 
+         plot.subtitle = element_text(size = 9, color = "gray20"),
+         legend.text = element_text(size = 8)) &  plot_layout(guides = "collect")
+ 
+  return(combined) 
+}
+
+sumdata <- pta_data7(out)
+
+pta_all_facet2 <- plot_pta_facet2(sumdata)
+pta_all_facet2
+
+pta_filtered_facet2 <- plot_pta_facet2(sumdata %>% filter(MIC > 4))
+pta_filtered_facet2
+
+```
+
+
+```{r}
+
+plot_pta_facet2 <- function(sumdata) {
+  doses_plot1 <- c("3g q12h tinf=3h 2CMT BAYES",
+                   "3g q12h tinf=3h 1CMT COVARIANCE")
+  doses_plot2 <- c("3g q12h tinf=3h 2CMT BAYES",
+                   "3g q12h tinf=3h 1CMT BOOTSTRAP")
+  df1 <- sumdata %>% filter(dose %in% doses_plot1)
+  df2 <- sumdata %>% filter(dose %in% doses_plot2)
+ 
+  plot1 <- ggplot(df1) +
+    geom_line(aes(x = MIC, y = my, color = dose)) +
+    geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, fill = dose), alpha = 0.2) +
+    geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") + 
+    labs(x = "MIC", y = "PTA") +
+    scale_color_manual(values = c("3g q12h tinf=3h 2CMT BAYES"="#3A5F2F",
+                                  "3g q12h tinf=3h 1CMT COVARIANCE"="#7A1C2B"),
+                       labels = c("3g q12h tinf=3h 2CMT BAYES" = "3g q12h tinf=3h\n2CMT BAYES",
+                                  "3g q12h tinf=3h 1CMT COVARIANCE" = "3g q12h tinf=3h\n1CMT COVARIANCE"),
+                       name = NULL) +
+    scale_fill_manual(values = c("3g q12h tinf=3h 2CMT BAYES"="#3A5F2F",
+                                 "3g q12h tinf=3h 1CMT COVARIANCE"="#7A1C2B"),
+                      labels = c("3g q12h tinf=3h 2CMT BAYES" = "3g q12h tinf=3h\n2CMT BAYES",
+                                 "3g q12h tinf=3h 1CMT COVARIANCE" = "3g q12h tinf=3h\n1CMT COVARIANCE"),
+                      name = NULL) +
+    scale_x_continuous(transform = "log2", breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+    scale_y_continuous(breaks = seq(0, 1, 0.2)) + 
+    theme(legend.position = "bottom")
+ 
+  plot2 <- ggplot(df2) +
+    geom_line(aes(x = MIC, y = my, color = dose)) +
+    geom_ribbon(aes(x = MIC, ymin = ly, ymax = hy, fill = dose), alpha = 0.2) +
+    geom_hline(yintercept = 0.9, color = 'grey30', linetype = "dashed") + 
+    labs(x = "MIC", y = "PTA") +
+    scale_color_manual(values = c("3g q12h tinf=3h 2CMT BAYES"="#3A5F2F",
+                                  "3g q12h tinf=3h 1CMT BOOTSTRAP"="#E6B12C"),
+                       labels = c("3g q12h tinf=3h 2CMT BAYES" = "3g q12h tinf=3h\n2CMT BAYES",
+                                  "3g q12h tinf=3h 1CMT BOOTSTRAP" = "3g q12h tinf=3h\n1CMT BOOTSTRAP"),
+                       name = NULL) +
+    scale_fill_manual(values = c("3g q12h tinf=3h 2CMT BAYES"="#3A5F2F",
+                                 "3g q12h tinf=3h 1CMT BOOTSTRAP"="#E6B12C"),
+                      labels = c("3g q12h tinf=3h 2CMT BAYES" = "3g q12h tinf=3h\n2CMT BAYES",
+                                 "3g q12h tinf=3h 1CMT BOOTSTRAP" = "3g q12h tinf=3h\n1CMT BOOTSTRAP"),
+                      name = NULL) +
+    scale_x_continuous(transform = "log2", breaks = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64), labels = c(1/4, 1/2, 1, 2, 4, 8, 16, 32, 64)) +
+    scale_y_continuous(breaks = seq(0, 1, 0.2)) + 
+    theme(legend.position = "bottom")
+ 
+  combined <- (plot1 | plot2) &
+    plot_annotation(
+      title = "Probability of Target Attainment - 3g q12h",
+      subtitle = "CEFTOLOZANE: %fT MIC of 30%\nTAZOBACTAM: %fT CT of 20% for a CT of 1 ug/ml") &
+    theme(legend.position = "bottom",
+          legend.title = element_blank(),
+          legend.direction = "horizontal",
+          plot.subtitle = element_text(size = 9, color = "gray20"),
+          legend.text = element_text(size = 7)) &
+    guides(color = guide_legend(nrow = 1),
+           fill = guide_legend(nrow = 1)) &
+    plot_layout(guides = "collect")
+  
+  return(combined)
+}
+```
+
+## 2CMT 
+
+```{r bootstrap function to make data 2CMT, eval = FALSE,}
+
+BS_DIR <- here::here("model/nonmem/bootstrap/bs102")
+BS_DATA_DIR <- here::here(BS_DIR, "data")
+
+if(!dir.exists(BS_DIR)) dir.create(BS_DIR)
+if(!dir.exists(BS_DATA_DIR)) dir.create(BS_DATA_DIR)
+  
+template_ctl <- readLines(
+  file.path(BS_DIR, "102bs.mod")
+)
+
+RUN <- seq(500) 
+
+set.seed(123456)
+
+nmdata <- xdata
+
+make_boot_run <- function(n, data, template, boot_dir, strat_cols = NULL, 
+                          overwrite = FALSE,  seed = 123456){
+  
+  if (n %% 10 == 0) message(glue("Created {n} bootstrap data sets"))
+  mod_name <- str_pad(paste0(n), width=3, pad="0")
+  
+  mod_path <- glue("{boot_dir}/{mod_name}")
+  
+  if(file.exists(paste0(mod_path, ".yaml")) && !overwrite) {
+    return(read_model(mod_path))
+  }
+  
+    data_new <- resample_df(
+     data,
+     key_cols = "ID",
+     strat_cols = strat_cols)
+
+  data_new <- rename(data_new, OID = ID, ID = KEY)
+  data_new <- select(data_new, unique(c(names(data), "OID")))
+  csv_file <- glue("{boot_dir}/data/{mod_name}.csv")
+  fwrite(data_new, csv_file , na = '.', quote = FALSE, col.names = FALSE )
+  new_ctl <- whisker.render(template, list(run_num = mod_name))
+  write_file(new_ctl, file = paste0(mod_path, ".ctl"))
+  
+  mod <- new_model(
+    mod_path,
+    .description = glue("bootstrap {mod_name}"), 
+    .overwrite = overwrite)
+  
+  mod
+}
+
+models <- map(
+  RUN, 
+  data = nmdata, 
+  .f = make_boot_run, 
+  template = template_ctl, 
+  boot_dir = BS_DIR, 
+  strat_cols = NULL,
+  overwrite = FALSE #set TRUE to run models and create datasets
+)
+
+```
+
+```{r bootstrap submit models 2CMT, eval = FALSE}
+
+#bbi.yaml file needs to be in boot folder
+# 
+# out <- submit_models(
+#   models,
+#   .config_path = here("model/nonmem/basic/bbi.yaml"),
+#   .bbi_args = list(overwrite = T, threads = 1)
+# )
+
+
+heavt_comp <- function(x) {
+  options(bbr.bbi_exe_path = "C:/Users/pauoku/AppData/Roaming/bbi/bbi.exe")
+
+  out <- bbr::submit_models(
+  models[x],
+  .config_path = here::here("model/nonmem/bootstrap/bs102/bbi.yaml"),
+  .bbi_args = list(overwrite = F, threads = 1)
+)
+
+}
+
+########### NEED TO BE RUN IF YOU WANT TO CHECK #############
+# cl <- makeCluster(detectCores())
+# clusterExport(cl, "models")
+# results_par <- parLapply(cl, RUN, heavt_comp)
+
+```
+
+### Summary of parameter estimates:
+
+```{r bootstrap summary 2CMT}
+
+boot <- param_estimates_batch(BS_DIR)
+err <- filter(boot, !is.na(error_msg))
+nrow(err)
+         
+```
+
+### Generate parameter sets
+
+```{r bootstrap parameters set 2CMT, include = F}
+
+set.seed(123456)
+
+post <- boot %>%
+  rename_with(~ gsub("\\(|\\)|,", "", .x), starts_with("OMEGA")) %>%
+  rename_with(~ gsub("\\(|\\)|,", "", .x), starts_with("SIGMA")) %>% 
+  mutate(iter = row_number()) %>% 
+  select(-c(error_msg, termination_code, absolute_model_path))
+
+```
+
+
+```{r bootstrap function 2CMT, include = F}
+
+sim_fun_boot <- function(i, mod = mod, df = post, .tinf, .dosecef, .dosetaz, .ii = 8) {
+
+ptab <- df[i,]
+
+omega_values <- c(
+    ptab$OMEGA11, ptab$OMEGA21, ptab$OMEGA22,
+    ptab$OMEGA31, ptab$OMEGA32, ptab$OMEGA33
+  )
+  if (any(is.na(omega_values))) {
+    warning("Missing OMEGA values for iteration ", i)
+    return(NULL) 
+  }
+
+Omega = as_bmat(list(OMEGA1.1=ptab$OMEGA11,
+     OMEGA2.1=ptab$OMEGA21,
+     OMEGA2.2=ptab$OMEGA22,
+     OMEGA3.1=ptab$OMEGA31, 
+     OMEGA3.2=ptab$OMEGA32, 
+     OMEGA3.3=ptab$OMEGA33), "OMEGA")
+
+omega_det <- det(Omega)
+  if (is.na(omega_det) || omega_det <= 0) {
+    warning("Invalid Omega matrix: determinant is NA or <= 0 for iteration ", i)
+    return(NULL) 
+  }
+
+nsubj <- 250
+dt = 0.1
+
+presim_data_1 <- data.frame(
+  ID = 1:nsubj,
+  TIME = 0,
+  EVID = 1,
+  CMT = 1,
+  ADDL = 21,
+  AMT = .dosecef,
+  RATE = (.dosecef/.tinf),
+  II = .ii) 
+
+presim_data_2 <- presim_data_1 %>%
+  mutate(AMT = .dosetaz, 
+         CMT = 3, 
+         RATE = (.dosetaz/.tinf))
+
+presim_data <- rbind(presim_data_1, presim_data_2)%>%
+  arrange(ID, TIME, CMT)
+
+mod = mod %>% omat(Omega) %>% update(param = list(THETA1 = ptab$THETA1,
+                                     THETA2 = ptab$THETA2,
+                                     THETA3 = ptab$THETA3,
+                                     THETA4 = ptab$THETA4,
+                                     THETA5 = ptab$THETA5))
+
+
+ifelse(det(Omega) <= 0, NA, det(Omega))
+
+pk_sim_1 <- mrgsim_df(mod,
+                    data = presim_data,
+                    add = c(seq(0, 8, dt) + 48),
+                    tad = T,
+                    recover = "ID")%>%
+  select(ID, TIME, TAD = tad, CEF, TAZ) %>%
+  filter(TIME >= 48 & TIME < 48 + 8) %>%
+  tidyr::expand_grid(MIC = exp(seq(log(1/4), log(64), length.out = 64))) %>%
+  group_by(MIC, ID) %>%
+  summarise(TARGET1 = (length(which(0.8 * CEF * 1000 >= MIC)) * dt) >= 0.3 * 8, ### CEF
+            TARGET2 = (length(which(0.7 * TAZ * 1000 >= 1)) * dt) >= 0.2 * 8) %>% ###TAZ 
+  group_by(MIC) %>%
+  summarise(PTA = mean(as.numeric(TARGET1 & TARGET2)),
+            PTAC = mean(as.numeric(TARGET1)),
+            PTAT = mean(as.numeric(TARGET2))) %>%
+  mutate(irep = i)
+}
+
+```
+ 
+### Params table
+
+```{r bs2cmt params, eval=F}
+
+model_dir <- here::here("model/nonmem/basic")
+model_run <- 102
+
+key <- yaml_as_df(here::here(model_dir, model_run, "parm.yaml"))
+
+params_df <- as.data.frame(post) 
+
+params_df <- params_df %>%
+  select(starts_with("THETA"), starts_with("OMEGA"), starts_with("SIGMA"))
+
+num_theta8_removed <- sum(params_df$THETA8 > 2000, na.rm = TRUE)
+num_theta3_removed <- sum(params_df$THETA3 > 700, na.rm = TRUE)
+
+num_theta8_removed
+num_theta3_removed
+
+params_long <- params_df %>%
+  pivot_longer(cols = everything(), names_to = "name", values_to = "Value") %>%
+  left_join(key, by = "name") %>%  
+  filter(!(name == "THETA8" & Value > 2000)) %>% ###remove values >2000 
+  filter(!(name == "THETA3" & Value > 700)) ###remove values >700 
+
+param_df <- params_long %>%
+  group_by(name, abb, panel) %>%
+  summarise(
+    Mean_raw = mean(Value, na.rm = TRUE),
+    SD_raw = sd(Value, na.rm = TRUE),
+    Lower_raw = quantile(Value, 0.025, na.rm = TRUE),
+    Upper_raw = quantile(Value, 0.975, na.rm = TRUE),
+    RSE_raw = SD_raw / Mean_raw * 100,
+    .groups = "drop") %>%
+  mutate(
+     Mean = case_when(
+      grepl("THETA", name) ~ round(Mean_raw, 2),
+      panel == "RV" ~ round(Mean_raw, 4),
+      TRUE ~ round(Mean_raw, 3)),
+    SD = case_when(
+      grepl("THETA", name) ~ round(SD_raw, 2),
+      panel == "RV" ~ round(SD_raw, 4),
+      TRUE ~ round(SD_raw, 3)),
+    Lower = case_when(
+      grepl("THETA", name) ~ round(Lower_raw, 2),
+      panel == "RV" ~ round(Lower_raw, 4),
+      TRUE ~ round(Lower_raw, 3)),
+    Upper = case_when(
+      grepl("THETA", name) ~ round(Upper_raw, 2),
+      panel == "RV" ~ round(Upper_raw, 4),
+      TRUE ~ round(Upper_raw, 3)),
+    RSE = case_when(
+      grepl("THETA", name) ~ round(RSE_raw, 2),
+      panel == "RV" ~ round(RSE_raw, 4),
+      TRUE ~ round(RSE_raw, 3)),
+    `95% CI` = paste0("[", Lower, ", ", Upper, "]")) %>%
+  select(type = panel, Parameter = abb, Mean, SD, `95% CI`, RSE) %>%
+  na.omit()
+
+panel_order <- c("struct", "IIV", "RV")
+
+param_df <- param_df %>%
+  mutate(type = factor(type, levels = panel_order)) %>%
+  arrange(type, Parameter)
+
+png_table <- param_df %>%
+  st_new() %>%
+  st_panel("type", duplicates_ok = TRUE) %>%
+  st_center(Parameter = "l") %>%
+  stable() %>%
+  st_as_image()
+png_table
+
+```
+
+## Session Info
+
+```{r sessioninfo}
+sessionInfo()
+```

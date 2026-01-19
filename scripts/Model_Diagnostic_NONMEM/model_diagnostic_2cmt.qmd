@@ -1,0 +1,778 @@
+---
+title: "Ceftolozane-Tazobactam NONMEM Model Diagnostic"
+author: "Paulina Okunska"
+date: today
+format: 
+  html:
+    toc: true
+    code-fold: true
+    number-sections: true
+    colorlinks: true
+execute: 
+  warning: false
+editor: visual
+theme: flatly
+---
+
+# Set-up Environment
+
+```{r libs, eval=T, echo=F, include=F}
+
+knitr::opts_chunk$set(dpi = 300)
+
+# R packages
+
+library(here)
+library(tidyverse)
+library(rmarkdown)
+library(skimr)
+library(pmplots)
+library(pmtables)
+library(dplyr)
+library(GGally)
+library(bbr)
+library(gridExtra)
+library(patchwork)
+library(nonmem2R)
+library(magrittr)
+library(flextable)
+library(yaml)
+library(yspec)
+library(PKNCA)
+library(ggpubr)
+library(magick)
+
+#conflict_scout()
+filter <- dplyr::filter
+select <- dplyr::select
+geomean <- PKNCA::geomean
+add_summary <- bbr::add_summary
+group_rows <- kableExtra::group_rows 
+get_legend <- cowplot::get_legend
+
+source(here("scripts/helpers/helper_model_diagnostic.R"))
+
+#renv::snapshot()
+renv::status()
+
+```
+
+### Script Parameters
+
+```{r script parameters, eval=T, echo=T}
+
+set.seed(5238974)
+model_run <- 102
+spec_name <- "lookup.yml"
+dat.name <- "RawData.csv"                   
+thisScript <- "model_diagnostic_2cmt.qmd"
+
+etas <- c("ETA-V1C", "ETA-CLC", "ETA-V2C", "ETA-QC", "ETA-V1T", "ETA-CLT", "ETA-V2T", "ETA-QT")    
+etas_est  <- c("ETA2//ETA-CLC", "ETA5//ETA-V1T", "ETA6//ETA-CLT")
+
+#Directories
+spec_dir <- here::here("data/derived")
+derDir <- here::here("data/derived")
+model_dir <- here::here("model/nonmem/basic")
+scripts <- here::here("scripts/Model_Development")
+tab_dir <- here::here("deliv/tables/Diagnostic")
+
+outDir <- paste0("model/nonmem/basic/", model_run)
+options(scipen = 999)
+
+##Continuous Covariates
+contcov_labels <-c("BW//Body Weight (kg)", "AGE//Age (years)", 
+                   "SOFA//Sequential Organ Failure Assessment", "PCT//Procalcitonin (ng/mL)", 
+                   "ELWI//Extravascular lung water index", "CI//Cardiac Index (L/min/m2)", 
+                   "CRE//Creatinine Concentration (mg/dL)", "ALB//Albumin Concentration (g/dL)", 
+                   "PROTEIN//Protein Concentration  (mg/mL)") #"HEIGHT//Height (cm)",
+contcov_vars <- c("BW", "AGE", "SOFA", "PCT", "ELWI", "CI", "CRE", "ALB", "PROTEIN") #"HEIGHT",
+
+##Categorical Covariates
+catcov_labels <- c( "SEX_f//Gender", "ECMO_f//ExtraCorporeal Membrane Oxygenation", "CRRT_f//Continuous Renal Replacement Therapy") 
+catcov_vars <- c("SEX_f", "ECMO_f", "CRRT_f") 
+
+```
+
+```{r bbbi}
+
+options(bbr.bbi_exe_path = "C:/Users/pauoku/AppData/Roaming/bbi/bbi.exe")
+
+bbr::use_bbi()
+
+bbi_init(.dir = model_dir,             # the directory to create the bbi.yaml in
+         .nonmem_dir = "C:/",          # location of NONMEM installation
+         .nonmem_version = "nm75g64",  # default NONMEM version to use
+.bbi_args = list(
+     mpi_exec_path ="C:/nm74g64/run/psexec",
+      parafile = "C:/nm74g64/run/fpiwini8.pnm",
+      parallel = FALSE,
+      threads = 1))
+
+```
+
+```{r parm yaml, eval=T, echo=F, include=T, warning=F, message=F}
+
+#Read in Parameters
+## the general parm.yaml file needs to made before running this script
+if(file.exists(file.path(model_dir, model_run, "parm.yaml"))){
+key <- yaml_as_df(file.path(model_dir, model_run, "parm.yaml"))
+} else {
+  file.copy(from = file.path(scripts,"parm.yaml"),
+            to = file.path(model_dir, model_run, "parm.yaml"))
+  file.edit(file.path(model_dir, model_run, "parm.yaml"))
+  stop("Edit parm.yaml then re-run script")
+}
+
+```
+
+```{r set theme, eval=T, echo=F, include=F}
+
+##Set ggplot Theme
+theme_set(theme_bw())
+theme_update(
+      axis.text = element_text(size = 10),
+      axis.text.x = element_text(size = 6),
+      axis.text.y = element_text(size = 6),
+      axis.title.x = element_text(size = 10),
+      axis.title.y = element_text(size = 10),
+      legend.text = element_text(size = 8),
+      legend.title = element_blank(),
+      legend.position = "bottom",
+                panel.grid.major = element_line(color = "#C8C9C7", linetype = "dotdash"),
+                panel.grid.minor = element_line(color = "#C8C9C7", linetype = "dotdash"))
+              #  panel.background = element_rect(fill = "white", color = "#1E63AF"))
+
+#Theme for statistics
+gofcol <- c('GeoMean Observed'='#073763','GeoMean IPRED'='#40904e','GeoMean PRED'='#e04f23')
+gofcol2 <- c('Median Observed'='#073763','Median IPRED'='#40904e','Median PRED'='#e04f23')
+drugs <- c("Ceftolozan" = "bisque4", "Tazabaktam" ="deepskyblue4")
+
+#adjust table size in output file
+FitFlextableToPage <- function(ft, pgwidth = 6){
+  ft_out <- ft %>% autofit()
+  ft_out <- width(ft_out, width = dim(ft_out)$widths*pgwidth /(flextable_dim(ft_out)$widths))
+  return(ft_out)
+}
+
+```
+
+# Read Inputs
+
+```{r mod-read, eval=T, echo=F, include=F}
+
+mod <- read_model(here::here(model_dir, model_run))
+sum <- mod %>% model_summary()
+
+key <- yaml_as_df(here::here(model_dir, model_run, "parm.yaml"))
+
+spec <- ys_load(file.path(spec_dir, spec_name))
+
+orig_data2 <- nm_join(mod, .join_col = "NUM", .files = c("SDTAB.DAT", "PATAB.DAT")) %>% 
+  ys_add_factors(spec) 
+
+obs <- read_csv(file.path(here(derDir, dat.name)),na = c("", "NA", "."), show_col_types = FALSE, guess_max = Inf)
+
+pred <- read.table(here::here(model_dir, model_run,
+                             paste0("SDTAB", ".DAT")), header = TRUE, skip =1) 
+
+par <- read.table(here::here(model_dir, model_run,
+                            paste0("PATAB", ".DAT")), header = TRUE, skip = 1) 
+
+catab <- read.table(here::here(model_dir, model_run,
+                            paste0("CATAB", ".DAT")), header = TRUE, skip = 1) 
+
+cotab <- read.table(here::here(model_dir, model_run,
+                            paste0("COTAB", ".DAT")), header = TRUE, skip = 1) 
+
+data <- pred %>% 
+  inner_join(par, by = c("NUM", "ID")) %>% 
+  inner_join(catab, by = c("NUM", "ID")) %>% 
+  inner_join(cotab, by = c("NUM", "ID")) %>%
+  ys_add_factors(.spec = spec) %>% 
+  filter(MDV==0)
+```
+
+# Parameters
+
+```{r parameters df, eval=T, echo=F, include=T, warning=F, message=F,dpi=600}
+
+param_df <- sum  %>%
+  param_estimates() %>%
+  mutate(name = gsub("[[:punct:]]", "", parameter_names)) %>%
+  inner_join(key, by = "name") %>%    # add names and labels to be used in the table
+  checkTransforms() %>%               # check for associated THETAs (e.g. for logit transformations)
+  defineRows() %>%                    # define series of T/F variables
+  getValueSE() %>%                    # define which value and se are required
+  get95CI() %>%                       # get upper/lower ci - determined using the SE and estimate
+  getpCV() %>%                        # get percent CV
+  getpRSE()   %>%                     # get percent RSE
+  formatValues() %>%                  # back transform as needed, round using' sig' and combine columns where needed
+  formatGreekNames() %>%              # format the labels to display greek symbols
+  getPanelName() %>%                  # Define panel names based on parameter type
+  dplyr::select(type, abb, greek, desc, value,estimate, ci, cv,upper, lower, corr_SD, pRSE,shrinkage) %>%  # select columns of interest
+  as.data.frame() %>% 
+  select(-upper, -lower, -estimate)
+
+param_df <- subset(param_df, select = c(-cv, -corr_SD))
+
+# Define footnotes 
+footAbbrev = "Abbreviations: CI = confidence intervals;
+                        RSE = relative standard error;
+                        CV = coefficient of variation;
+                        SD = standard deviation"
+footAbbrev_Om = "Abbreviations: CI = confidence intervals;
+                        RSE = relative standard error;s
+                        CV = coefficient of variation;
+                        SD = standard deviation"
+
+footDerive1 = "Confidence intervals = estimate $\\pm$ 1.96 $\\cdot$ SE"  
+footDerive2 = "CV\\% of log-normal omegas = sqrt(exp(estimate) - 1) $\\cdot$ 100"
+footDerive3 = "CV\\% of proportional error = sqrt(estimate) $\\cdot$ 100"
+footOFVCN = paste0("OFV: ",sum$ofv[[1]]$ofv_no_constant, 
+                   " | Condition No: ", round(sum$condition_number[[1]]$condition_number), digits=0)
+
+
+##  FIXED EFFECTS table 
+fixed = param_df %>%
+  filter(str_detect(type, "Struct") |
+           str_detect(type, "effect")) %>%
+  select(-shrinkage) %>%
+  st_new() %>%
+  st_panel("type") %>%
+  st_center(desc = col_ragged(5.5),
+            abb = "l") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_rename("Estimate" = "value",
+            "95\\% CI" = "ci",
+            "RSE (\\%)"="pRSE") %>%
+  st_files(r = NULL
+           #, output = "pk-param-final-fixed.tex"
+           ) %>%
+  st_notes(footAbbrev, footDerive1, footOFVCN) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() %>%  st_as_image()
+
+fixed
+
+##  RANDOM EFFECTS table
+random = param_df %>%
+  filter(str_detect(greek, "Omega") |
+           str_detect(type, "Resid")) %>%
+  select(-desc) %>%
+  st_new %>%
+  st_panel("type") %>%
+  st_center(abb = "l") %>%
+  st_blank("abb", "greek") %>%
+  st_rename("Estimate" = "value",
+            "95\\% CI" = "ci",
+            "Shrinkage (\\%)" = "shrinkage",
+            "RSE (\\%)"="pRSE") %>%
+  st_files(r = NULL
+           #, output = "pk-param-final-random.tex"
+           ) %>%
+  st_notes(footAbbrev_Om, footDerive2, footDerive3) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() %>% st_as_image()
+
+random
+
+```
+
+# Model Summary
+
+```{r flexible to page table, eval=T, echo=F, include=T, warning=F, message=F}
+
+#Model Summary 
+sum
+sum$ofv
+sum$condition_number
+
+sum_tab <- FitFlextableToPage(flextable(param_df %>% 
+                             select(-type, -greek) %>% 
+                             rename("Name" = "abb",
+                                    "Description" = "desc",
+                                    "Estimate" = "value",
+                                    `95% CI` = "ci",
+                                    `RSE (%)` = "pRSE",
+                                    `Shrinkage (%)`= "shrinkage")))
+sum_tab
+
+```
+
+# Concordance Plots
+
+## IPRED/PRED vs DV
+
+```{r predictions vs conc, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+pred <- data %>% select(NUM, TIME, DV, PRED, IPRED, WRES, CWRES, CMT, NPDE)
+sub <- data %>% 
+  left_join(par) %>%
+  arrange(ID, TIME) %>% 
+  mutate(RES = DV-PRED) 
+
+maxconc <- max(sub$IPRED, sub$PRED, sub$DV,na.rm = TRUE)
+
+# colored by drugs 
+c1 <- ggplot(sub, aes(IPRED, DV, color = as.factor(CMT_f))) + geom_point() + geom_abline() + scale_colour_manual(values = drugs) + guides(color = guide_legend(title = NULL))
+c2 <- ggplot(sub, aes(PRED, DV, color = as.factor(CMT_f))) + geom_point() + geom_abline() + scale_colour_manual(values = drugs) + guides(color = guide_legend(title = NULL))
+c3 <- dv_ipred(sub, yname = "concentration (ug/mL)") + geom_point(aes(color = CMT_f)) + theme() + scale_colour_manual(values = drugs) + guides(color = guide_legend(nrow = 1, title = NULL)) 
+c4 <- dv_pred(sub, yname = "concentration (ug/mL)") + geom_point(aes(color = CMT_f)) + theme() + scale_colour_manual(values = drugs) + guides(color = guide_legend(nrow = 1, title = NULL)) 
+
+# list(c1 + xlim(0, maxconc) + ylim(0, maxconc) + labs(caption = "Linear scale"),
+#        c1 + scale_y_log10(limits = c(0.5, 1000)) + scale_x_log10(limits = c(0.5, 1000)) + labs(caption = "log-log scale")) %>% pm_grid() + plot_layout(guides = "collect") 
+# ##ggsave(here::here(outDir,"IPRED_DV_by_dose.png"), width = 10, height = 6)
+# 
+# list(c2 + xlim(0,maxconc) + ylim(0,maxconc) + labs(caption = "Linear scale"),
+#        c2 + scale_y_log10(limits = c(0.5, 1000)) + scale_x_log10(limits = c(0.5, 1000)) + labs(caption = "log-log scale")) %>% pm_grid() + plot_layout(guides = "collect") 
+# ##ggsave(here::here(outDir,"PRED_DV_by_dose.png"), width = 10, height = 6)
+
+list(c3 + xlim(0, maxconc) + ylim(0, maxconc) + labs(caption = "Linear scale"),
+       c3 + scale_y_log10(limits = c(0.5, 1000)) + scale_x_log10(limits = c(0.5, 1000)) + labs(caption = "log-log scale")) %>% pm_grid() + plot_layout(guides = "collect") + guides(color = guide_legend(nrow = 1, title = NULL)) 
+##ggsave(here::here(outDir,"IPRED_DV_by_dose_second.png"), width = 10, height = 6)
+
+list(c4 + xlim(0, maxconc) + ylim(0, maxconc) + labs(caption = "Linear scale"),
+       c4 + scale_y_log10(limits = c(0.5, 1000)) + scale_x_log10(limits = c(0.5, 1000)) + labs(caption = "log-log scale")) %>% pm_grid() + plot_layout(guides = "collect") + guides(color = guide_legend(nrow = 1, title = NULL)) 
+##ggsave(here::here(outDir,"PRED_DV_by_dose_second.png"), width = 10, height = 6)
+
+```
+
+## All
+
+```{r concordance_all, eval=T, echo=F, include=T, warning=F, message=F,dpi=300}
+
+c1 <- dv_pred(pred, yname = "(ug/mL)") + theme(plot.margin = unit(c(0.1, 1, 0.1, 0.1), "cm"))  
+c2 <- dv_ipred(pred, yname = "(ug/mL)") + labs(caption = "Linear scale") + theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+
+#list(c1,c2) %>% pm_grid()
+
+c3 <- dv_pred(pred, yname = "(ug/mL)", loglog=TRUE)  + theme(axis.text.x=element_text(size=7.5)) + theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+c4 <- dv_ipred(pred, yname = "(ug/mL)", loglog=TRUE) + theme(axis.text.x=element_text(size=7.5)) + labs(caption = "Semi-log scale") + theme(plot.margin = unit(c(0.1, 1, 0.1, 0.1), "cm"))  
+
+#list(c3,c4) %>% pm_grid()
+list(c1,c3,c2,c4) %>% pm_grid() 
+
+```
+
+## Ceftolozane
+
+```{r concordance_cef, eval=T, echo=F, include=T, warning=F, message=F,dpi=300}
+
+c1 <- dv_pred(pred %>% filter(CMT == 1), yname = "(ug/mL)") + theme(plot.margin = unit(c(0.1, 1, 0.1, 0.1), "cm"))  
+c2 <- dv_ipred(pred %>% filter(CMT == 1), yname = "(ug/mL)") + labs(caption = "Linear scale") + theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+
+#list(c1,c2) %>% pm_grid() + plot_annotation(title = "Ceftolozane")
+
+c3 <- dv_pred(pred %>% filter(CMT == 1), yname = "(ug/mL)", loglog=TRUE)  + theme(axis.text.x=element_text(size=7.5)) + theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+c4 <- dv_ipred(pred %>% filter(CMT == 1), yname = "(ug/mL)", loglog=TRUE) + theme(axis.text.x=element_text(size=7.5)) + labs(caption = "Semi-log scale") + theme(plot.margin = unit(c(0.1, 1, 0.1, 0.1), "cm"))  
+
+#list(c3,c4) %>% pm_grid() + plot_annotation(title = "Ceftolozane")
+list(c1,c3,c2,c4) %>% pm_grid()  + plot_annotation(title = "Ceftolozane")
+
+```
+
+## Tazobactam
+
+```{r concordance_taz, eval=T, echo=F, include=T, warning=F, message=F,dpi=300}
+
+c1 <- dv_pred(pred %>% filter(CMT == 3), yname = "(ug/mL)") + theme(plot.margin = unit(c(0.1, 1, 0.1, 0.1), "cm"))  
+c2 <- dv_ipred(pred %>% filter(CMT == 3), yname = "(ug/mL)") + labs(caption = "Linear scale") + theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+
+#list(c1,c2) %>% pm_grid() + plot_annotation(title = "Tazobactam")
+
+c3 <- dv_pred(pred %>% filter(CMT == 3), yname = "(ug/mL)", loglog=TRUE)  + theme(axis.text.x=element_text(size=7.5)) + theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  
+c4 <- dv_ipred(pred %>% filter(CMT == 3), yname = "(ug/mL)", loglog=TRUE) + theme(axis.text.x=element_text(size=7.5)) + labs(caption = "Semi-log scale") + theme(plot.margin = unit(c(0.1, 1, 0.1, 0.1), "cm"))  
+
+#list(c3,c4) %>% pm_grid() + plot_annotation(title = "Tazobactam")
+list(c1,c3,c2,c4) %>% pm_grid() + plot_annotation(title = "Tazobactam")
+
+```
+
+# Residual Plots
+
+```{r residual plots, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+#ALL
+sub1 <- sub 
+  r1 <- ggplot(sub1, aes(PRED, WRES)) + geom_point(aes(color = as.factor(CMT_f))) + geom_hline(yintercept = 0) + geom_smooth() + labs(y = "Weighted\nResiduals", x = expression(" ")) + scale_colour_manual(values = drugs)
+  r2 <- ggplot(sub1, aes(PRED, CWRES)) + geom_point(aes(color = as.factor(CMT_f))) + geom_hline(yintercept = 0) + geom_smooth() + labs(y = "Conditional\nWeighted Residuals", x = expression(" ")) + scale_colour_manual(values = drugs)
+  r3 <- ggplot(sub1, aes(TIME, WRES)) + geom_point(aes(color = as.factor(CMT_f))) + geom_hline(yintercept = 0) + geom_smooth() + labs(y = " ", x = expression(" ")) + scale_colour_manual(values = drugs) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+  r4 <- ggplot(sub1, aes(TIME, CWRES)) + geom_point(aes(color = as.factor(CMT_f))) + geom_hline(yintercept = 0) + geom_smooth() + labs(y = "", x = " ") + scale_colour_manual(values = drugs) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+  r5 <- ggplot(sub1, aes(PRED, NPDE)) + geom_point(aes(color = as.factor(CMT_f))) + geom_hline(yintercept = 0) + geom_smooth() + labs(y = "Normalized prediction\ndistribution errors", x = expression("Population Predicted Concentrations (ug/mL)")) + scale_colour_manual(values = drugs)
+  r6 <- ggplot(sub1, aes(TIME, NPDE)) + geom_point(aes(color = as.factor(CMT_f))) + geom_hline(yintercept = 0) + geom_smooth() + labs(y = " ", x = expression("Time After Last Dose (hr)")) + scale_colour_manual(values = drugs) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+ 
+  ggarrange(r1,r3,r2,r4,r5,r6, ncol=2, nrow=3, common.legend = TRUE, legend="bottom")
+
+#CEF   
+sub1 <- sub %>% filter(CMT == 1)
+  r1 <- ggplot(sub1, aes(PRED, WRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() +
+  labs(y = "Weighted\nResiduals", x = expression(" "))
+  r2 <- ggplot(sub1, aes(PRED, CWRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() +
+     labs(y = "Conditional\nWeighted Residuals", x = expression(" "))
+  r3 <- ggplot(sub1, aes(TIME, WRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() + labs(y = " ", x = expression(" ")) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+  r4 <- ggplot(sub1, aes(TIME, CWRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() +
+     labs(y = "", x = " ") + scale_x_continuous(breaks = seq(0, 26, by = 4))
+  r5 <- ggplot(sub1, aes(PRED, NPDE)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() + labs(y = "Normalized prediction\ndistribution errors", x = expression("Population Predicted Concentrations (ug/mL)"))
+  r6 <- ggplot(sub1, aes(TIME, NPDE)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() + labs(y = " ", x = expression("Time After First Dose (hr)")) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+ 
+   list(r1,r3,r2,r4,r5,r6) %>% pm_grid() + plot_annotation(title = "Ceftolozane")
+   
+#TAZ 
+   sub1 <- sub %>% filter(CMT == 3)
+  r1 <- ggplot(sub1, aes(PRED, WRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() +
+  labs(y = "Weighted\nResiduals", x = expression(" "))
+  r2 <- ggplot(sub1, aes(PRED, CWRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() +
+     labs(y = "Conditional\nWeighted Residuals", x = expression(" "))
+  r3 <- ggplot(sub1, aes(TIME, WRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() + labs(y = " ", x = expression(" ")) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+  r4 <- ggplot(sub1, aes(TIME, CWRES)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() +
+     labs(y = "", x = " ") + scale_x_continuous(breaks = seq(0, 26, by = 4))
+  r5 <- ggplot(sub1, aes(PRED, NPDE)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() + labs(y = "Normalized prediction\ndistribution errors", x = expression("Population Predicted Concentrations (ug/mL)"))
+  r6 <- ggplot(sub1, aes(TIME, NPDE)) + geom_point() + geom_hline(yintercept = 0) + geom_smooth() + labs(y = " ", x = expression("Time after first dose (hr)")) + scale_x_continuous(breaks = seq(0, 26, by = 4))
+ 
+   list(r1,r3,r2,r4,r5,r6) %>% pm_grid() + plot_annotation(title = "Tazobactam")
+
+```
+
+# Histogram Plots and Q-Q Plots
+
+```{r histogram plots, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+set.ETA.labels(etas_est)
+eta.hist.GOF(par)
+##ggsave(here::here(outDir, "hist_ETA.png"), width = 8, height = 6)
+h1 <- cwres_hist(pred)
+h2 <- wres_hist(pred)
+h3 <- npde_hist(pred)
+list(h1, h2, h3) %>% pm_grid()
+##ggsave(here::here(outDir, "hist_WRES_CWRES.png"), width = 8, height = 6)
+eta.qqnorm.GOF(par)
+##ggsave(here::here(outDir, "QQ_ETA.png"), width = 8, height = 6)
+
+h4 <-eta_hist(par, etas_est) %>% pm_grid()
+h4
+
+q1<-cwres_q(pred)
+q2<-npde_q(pred)
+list(q1, q2) %>% pm_grid()
+
+```
+
+# GOF Plots
+
+## GeoMean
+
+### Linear
+
+```{r gof linear, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+sub1 <- sub %>% distinct(CMT_f) 
+# sub2 <- sub  %>% mutate(BINTIME = floor(TIME + 0.5))
+
+sub2 <- sub  %>% 
+  mutate(x = cut_interval(TIME,10)) %>%
+  group_by(x) %>%
+  mutate(NTIME = mean(TIME))
+
+gof <- map(seq(1, nrow(sub1)), function(u){
+  temp <- sub2 %>%
+    filter(CMT_f == sub1[u,1]) %>% 
+      group_by(NTIME) %>%
+      mutate(GM_OBS = geomean(DV, na.rm = TRUE),
+             GM_IPRED = geomean(IPRED, na.rm = TRUE),
+             GM_PRED = geomean(PRED, na.rm = TRUE))
+ 
+  g1 <- ggplot(data = temp, aes(x = TIME, y = DV)) +
+    geom_point(color = "#093129", size = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_OBS, color = 'GeoMean Observed'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_IPRED, color = 'GeoMean IPRED'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_PRED, color = 'GeoMean PRED'), linewidth = 0.9) +
+    theme(strip.text.x = element_text(size = 12)) +
+    labs(x = "Time (hours)", y = "Concentration (ug/mL)", title = (sub1[u,1])) +
+    scale_colour_manual(values = gofcol) +
+    scale_x_continuous(breaks = seq(0, 26, by = 4))
+
+  g1 + labs(caption = "Linear scale")
+})
+
+gof
+
+```
+
+### Semi-log
+
+```{r gof semilog, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+sub1 <- sub %>% distinct(CMT_f) 
+gof <- map(seq(1, nrow(sub1)), function(u){
+  temp <- sub2 %>%
+    filter(CMT_f == sub1[u,1]) %>% 
+      group_by(NTIME) %>%
+      mutate(GM_OBS = geomean(DV, na.rm = TRUE),
+             GM_IPRED = geomean(IPRED, na.rm = TRUE),
+             GM_PRED = geomean(PRED, na.rm = TRUE))
+ 
+  g1 <- ggplot(data = temp, aes(x = TIME, y = DV)) +
+    geom_point(color = "#093129", size = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_OBS, color = 'GeoMean Observed'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_IPRED, color = 'GeoMean IPRED'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_PRED, color = 'GeoMean PRED'), linewidth = 0.9) +
+    theme(strip.text.x = element_text(size = 12)) +
+    labs(x = "Time (hours)", y = "Concentration (ug/mL)", title = (sub1[u,1])) +
+    scale_colour_manual(values = gofcol) +
+    scale_x_continuous(breaks = seq(0, 26, by = 4))
+
+  g1 + scale_y_log10() + 
+    #scale_y_continuous(limits = c(0, 100)) + 
+    labs(caption = "Semi-log scale")
+})
+
+gof
+
+legend <- get_legend(gof[[1]] + theme(legend.position = "right") + 
+                       guides(color = guide_legend(nrow = 1))) 
+
+ gof[[1]] <- gof[[1]] + theme(
+    axis.title.x = element_blank(),
+   # axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+   labs(caption = NULL)
+ 
+ pm_grid(gof[[1]]/gof[[2]]) + plot_layout(ncol = 1, heights = c(10, 0.01)) + legend +plot_annotation(title = "Two-compartment model") & theme(legend.position = "none")
+ 
+ combined <- pm_grid(gof[[1]]/gof[[2]]) + plot_layout(ncol = 1, heights = c(10, 0.01)) + legend +plot_annotation(title = "Two-compartment model") & theme(legend.position = "none")
+ 
+```
+
+## Median
+
+### Linear
+
+```{r gof linear median, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+sub1 <- sub %>% distinct(CMT_f) 
+gof <- map(seq(1, nrow(sub1)), function(u){
+  temp <- sub2 %>%
+    filter(CMT_f == sub1[u,1]) %>% 
+    group_by(NTIME) %>%
+      mutate(MED_OBS = median(DV, na.rm = TRUE),
+             MED_IPRED = median(IPRED, na.rm = TRUE),
+             MED_PRED = median(PRED, na.rm = TRUE)) 
+  
+  g1 <- ggplot(data = temp, aes(x = TIME, y = DV)) +
+    geom_point(color = "#093129", size = 0.9) +
+    geom_line(aes(x = NTIME, y = MED_OBS, color = 'Median Observed'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = MED_IPRED, color = 'Median IPRED'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = MED_PRED, color = 'Median PRED'), linewidth = 0.9) +
+    theme(strip.text.x = element_text(size = 12)) +
+    labs(x = "Time (hours)", y = "Concentration (ug/mL)", title = (sub1[u,1])) +
+    scale_colour_manual(values = gofcol2) +
+    scale_x_continuous(breaks = seq(0, 26, by = 4))
+
+
+  g1 + labs(caption = "Linear scale")
+})
+
+gof
+
+```
+
+### Semi-log
+
+```{r gof semilog median, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+sub1 <- sub %>% distinct(CMT_f) 
+gof <- map(seq(1, nrow(sub1)), function(u){
+  temp <- sub2 %>%
+    filter(CMT_f == sub1[u,1]) %>% 
+    group_by(NTIME) %>%
+      mutate(MED_OBS = median(DV, na.rm = TRUE),
+             MED_IPRED = median(IPRED, na.rm = TRUE),
+             MED_PRED = median(PRED, na.rm = TRUE)) 
+  
+  g1 <- ggplot(data = temp, aes(x = TIME, y = DV)) +
+    geom_point(color = "#093129", size = 0.9) +
+    geom_line(aes(x = NTIME, y = MED_OBS, color = 'Median Observed'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = MED_IPRED, color = 'Median IPRED'), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = MED_PRED, color = 'Median PRED'), linewidth = 0.9) +
+    theme(strip.text.x = element_text(size = 12)) +
+    labs(x = "Time (hours)", y = "Concentration (ug/mL)", title = (sub1[u,1])) +
+    scale_colour_manual(values = gofcol2) +
+    scale_x_continuous(breaks = seq(0, 26, by = 4))
+  
+  
+  g1 + scale_y_log10() + 
+    #scale_y_continuous(limits = c(0, 100)) + 
+    labs(caption = "Semi-log scale")
+})
+
+gof
+
+legend <- get_legend(gof[[1]] + theme(legend.position = "right") + 
+                       guides(color = guide_legend(nrow = 1))) 
+
+ gof[[1]] <- gof[[1]] + theme(
+    axis.title.x = element_blank(),
+   # axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+   labs(caption = NULL)
+ 
+ pm_grid(gof[[1]]/gof[[2]]) + plot_layout(ncol = 1, heights = c(10, 0.01)) + legend + plot_annotation(title = "") & theme(legend.position = "none")
+```
+
+## Semi-log individual
+
+```{r gof semilog ind, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+sub1 <- sub %>% distinct(ID) 
+gof_ind <- map(seq(1,nrow(sub1)), function(u){
+  temp <- sub2 %>% 
+      group_by(NTIME, CMT_f) %>%
+       mutate(GM_OBS = geomean(DV, na.rm = TRUE),
+             GM_IPRED = geomean(IPRED, na.rm = TRUE),
+             GM_PRED = geomean(PRED, na.rm = TRUE)) %>% 
+    # select(ID, DV, TIME, GM_OBS:GM_PRED, CMT_f) %>%  
+    # pivot_longer(GM_OBS:GM_PRED, names_to = "Stats", values_to = "Values") %>% 
+    # pivot_wider(names_from = CMT_f, values_from = Values) %>% 
+    filter(ID == sub1[u,1]) 
+ 
+  g1 <- ggplot(data = temp, aes(x = TIME, y = DV)) +
+    geom_point(aes(shape = as.factor(CMT_f)), size = 2.5, color = "grey33") +
+    geom_line(aes(x = NTIME, y = GM_OBS, color = 'GeoMean Observed', linetype = as.factor(CMT_f)), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_IPRED, color = 'GeoMean IPRED', linetype = as.factor(CMT_f)), linewidth = 0.9) +
+    geom_line(aes(x = NTIME, y = GM_PRED, color = 'GeoMean PRED', linetype = as.factor(CMT_f)), linewidth = 0.9) +
+    theme(strip.text.x = element_text(size = 12)) +
+    labs(x = "Time (hours)", y = "Concentration (ug/mL)", title = paste0("Patient no. ", sub1[u,1])) +
+    scale_colour_manual(values = c(drugs, gofcol)) +
+    scale_x_continuous(breaks = seq(0, 26, by = 4)) +
+    guides(col = guide_legend(nrow = 2), linetype = guide_legend(nrow = 2), shape = guide_legend(nrow = 2))
+
+  g1 + scale_y_log10() + labs(caption = "Semi-log scale")
+})
+
+gof_ind
+
+```
+
+# ETA Plots
+
+## ETA Correlations
+
+```{r eta correlations, echo = F, warning = F, message = F, dpi=300}
+
+eta_cor <- par  %>% 
+  select(ID, starts_with("ETA")) %>%  
+  rename("ETA-CLC" = ETA2, "ETA-V1T" = ETA5, "ETA-CLT" = ETA6) %>% 
+  distinct() %>% 
+  select(-ID) 
+
+plot_eta_cor <- corrplot::corrplot(cor(eta_cor), method = 'circle', type = "upper", addCoef.col = 'grey1', cl.pos = 'r',tl.srt=45, tl.col="black")
+
+id <- distinct(sub, ID, .keep_all = T)
+etas <-  stringr::str_subset(names(sub), "ETA") 
+p <- eta_pairs(id, etas_est) 
+p
+
+```
+
+## Categorical ETA plots
+
+```{r cat-eta, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+#Categorical Covariates
+cat_link <- data %>% #filter(ID%in%sub$ID) %>%
+  select(ID, SEX_f, ECMO_f, CRRT_f) %>% 
+  distinct(ID, .keep_all = T) %>% 
+  group_by(ID) 
+
+ dat_cat <- par %>% distinct(ID, .keep_all = T) %>% left_join(cat_link)
+ 
+# eta_plots_cat <- eta_cat(dat_cat, catcov_labels, etas_est, points = list(width  = 0.1)) 
+# eta_plots_cat
+
+eta_plots_cat1 <- eta_cat(dat_cat, catcov_labels, etas_est[1], points = list(width  = 0.1)) %>% pm_grid()
+eta_plots_cat1
+
+eta_plots_cat2 <- eta_cat(dat_cat, catcov_labels, etas_est[2], points = list(width  = 0.1))  %>% pm_grid()
+eta_plots_cat2
+
+eta_plots_cat5 <- eta_cat(dat_cat, catcov_labels, etas_est[3], points = list(width  = 0.1))  %>% pm_grid() 
+eta_plots_cat5
+
+wrap_cont_cat(dat_cat, catcov_labels, etas_est, points = list(width  = 0.1)) 
+
+```
+
+## Continuous ETA plots
+
+```{r cont-eta, eval=T, echo=F, include=T, warning=F, message=F, dpi=300}
+
+#Continuous Covariates
+cont_link <- data %>% filter(ID%in%sub$ID) %>%
+  select(ID, HEIGHT, BW, AGE, SOFA, PCT, ELWI, CI, CRE, ALB, PROTEIN) %>% distinct() %>%  
+ mutate_if(is.numeric, ~replace(., .==-999, NA))
+dat_cont <- par %>% distinct(ID, .keep_all = T)  %>% left_join(cont_link)
+
+# eta_plots_cont <- eta_cont(dat_cont, contcov_labels, etas_est) 
+# eta_plots_cont
+
+eta_plots_cont1 <- wrap_eta_cont(dat_cont, contcov_labels, etas_est[1],  scales="free_x",  use_labels=TRUE)  
+eta_plots_cont1
+
+eta_plots_cont2 <- wrap_eta_cont(dat_cont, contcov_labels, etas_est[2],  scales="free_x",  use_labels=TRUE) 
+
+eta_plots_cont3 <- wrap_eta_cont(dat_cont, contcov_labels, etas_est[3],  scales="free_x",  use_labels=TRUE)
+eta_plots_cont3
+
+# map2(.x = contcov_labels, .y = contcov_vars, 
+#      function(xlab, yvar){eta_cont(eta %>% filter(eta[[yvar]]>0), x=xlab , y =etas_est) %>% pm_grid()
+# })
+
+```
+
+```{r combined gof mod1mod2, dpi =300}
+
+path_1cmt <- "D:/PROJECTS/ceftaz/model/nonmem/basic/100/model_diagnostic_1cmt_files/figure-html"
+path_2cmt <- "D:/PROJECTS/ceftaz/model/nonmem/basic/102/model_diagnostic_2cmt_files/figure-html"
+
+img1_path <- list.files(path_1cmt, pattern = "gof semilog-3.*\\.png$", full.names = TRUE)
+img2_path <- list.files(path_2cmt, pattern = "gof semilog-3.*\\.png$", full.names = TRUE)
+
+img1 <- image_read(img1_path)
+img2 <- image_read(img2_path)
+
+
+width <- min(image_info(img1)$width, image_info(img2)$width)
+img1 <- image_resize(img1, paste0(width))
+img2 <- image_resize(img2, paste0(width))
+
+spacer <- image_blank(width = width, height = 120, color = "white")
+
+combined_img <- image_append(c(img1, spacer, img2), stack = TRUE)
+
+
+out_path <- "D:/PROJECTS/ceftaz/scripts/Model_Diagnostic/combined_diagnostics.png"
+image_write(combined_img, out_path)
+
+
+height <- min(image_info(img1)$height, image_info(img2)$height)
+img1 <- image_resize(img1, paste0("x", height))
+img2 <- image_resize(img2, paste0("x", height))
+
+spacer <- image_blank(width = 120, height = height, color = "white")
+
+combined_img <- image_append(c(img1, spacer, img2), stack = FALSE)
+
+# out_path <- "D:/PROJECTS/ceftaz/scripts/Model_Diagnostic/combined_diagnostics_2.png"
+# image_write(combined_img, out_path)
+
+combined_img
+
+```
+
+# Sesion info
+
+```{r sessioninfo, echo = FALSE, include=TRUE, warning=F, message=F}
+sessionInfo()
+```

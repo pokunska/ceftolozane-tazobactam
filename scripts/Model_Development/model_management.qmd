@@ -1,0 +1,118 @@
+---
+title: "Ceftolozane-Tazobactam Model Development"
+format: html
+editor: visual
+---
+
+#### Settings
+
+```{r libs}
+#renv::status()
+#devtools::install_github("metrumresearchgroup/bbr", ref = "main")
+
+options(scipen = 999)
+library(bbr)
+library(bbr.bayes)
+library(conflicted)
+library(tidyverse)
+library(here)
+library(arsenal)
+library(purrr)
+setwd(here::here())
+
+# conflicts
+conflict_prefer("filter", "dplyr")
+conflict_prefer("lag", "dplyr")
+
+# change model dir depending on analysis
+proj_dir <- here::here()
+data_dir <- file.path(proj_dir, "data","derived")
+model_dir <- file.path(proj_dir, "model", "nonmem", "basic")
+ 
+# Modeling Dataset
+data_mod <-read_csv(file.path(data_dir, "RawData.csv"), na = c(".", " "), guess_max = Inf,  show_col_types = FALSE)
+
+```
+
+## Source Helpers
+
+```{r functions}
+source(here("scripts/helpers//helper_model.R"))
+```
+
+##Initialize BBI
+
+```{r bbi}
+
+options(bbr.bbi_exe_path = "C:/Users/pauoku/AppData/Roaming/bbi/bbi.exe")
+
+bbr::use_bbi()
+
+bbi_init(.dir = model_dir,             # the directory to create the bbi.yaml in
+         .nonmem_dir = "C:/",          # location of NONMEM installation
+         .nonmem_version = "nm75g64",  # default NONMEM version to use
+.bbi_args = list(
+     mpi_exec_path ="C:/nm74g64/run/psexec",
+      parafile = "C:/nm74g64/run/fpiwini8.pnm",
+      parallel = TRUE,
+      threads = 2
+    )
+)
+
+```
+
+## Run 100:
+
+```{r}
+##Run Number [UPDATE EACH TIME]
+run_no <- 100
+
+##Create model object
+run <- new_model(file.path(model_dir, run_no), .overwrite = FALSE) # to run set TRUE
+  
+##Run Model
+ run %>% submit_model(.overwrite = FALSE,.mode = "local") # to run set TRUE
+
+##Read Model Output
+run <- read_model(file.path(model_dir, run_no))
+sum <- model_summary(run)
+print(sum)
+
+##Add and tags
+run <- run %>% 
+  replace_all_tags(c("1 cmp dispos. model","IV admin", "etas estimated for CL & V for CEF & TAZ", "SDCLT:SDV1T")) %>% 
+  add_notes(" ")
+
+par <- param_estimates(sum)
+print(par)
+
+```
+
+## Run 102:
+
+```{r}
+##Run Number [UPDATE EACH TIME]
+run_no <- 102
+
+##Create model object
+run <- new_model(file.path(model_dir, run_no), .overwrite = FALSE) # to run set TRUE
+  
+##Run Model
+ run %>% submit_model(.overwrite = FALSE,.mode = "local") # to run set TRUE
+
+##Read Model Output
+run <- read_model(file.path(model_dir, run_no))
+sum <- model_summary(run)
+print(sum)
+
+##Add and tags
+run <- run %>%
+  replace_all_tags(c("2 cmp dispos. model", "IV admin", "etas estimated for CLC, V1T & CLT")) %>%
+  add_notes("")
+
+par <- param_estimates(sum)
+print(par)
+
+```
+
+

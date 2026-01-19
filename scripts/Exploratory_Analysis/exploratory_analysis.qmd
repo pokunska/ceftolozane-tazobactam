@@ -1,0 +1,408 @@
+---
+title: "Ceftolozane - Tazobactam Exploratory Data Analysis"
+author: "Paulina Okunska"
+date: today
+format: 
+  html:
+    toc: true
+    code-fold: true
+    number-sections: true
+    colorlinks: true
+  pdf:
+    toc: true
+    number-sections: false
+    colorlinks: true
+execute: 
+  warning: false
+editor: visual
+---
+
+# **Introduction**
+
+Antimicrobial therapy requires a precise dosage of antibiotics to achieve the therapeutic goal with a minimum level of toxic effects and low risk of developing microbial resistance. Due to the altered pharmacokinetics of drugs in critically ill patients, the dosing regimen in this group of patients may differ from the dosing regimen established in clinical trials on healthy volunteers. Ceftolozane with tazobactam is administered during therapy in patients with particularly resistant strains, especially Pseudomonas aeruginosa. Administration of antibiotics requires precise dosing. Reaching concentrations too low than needed to inhibit growth or kill the bacteria can lead to the development of antibiotic resistance. Reaching too high doses is also dangerous because it can lead to severe side effects and organ damage.
+
+```{r renv, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+#renv::snapshot()
+renv::status()
+```
+
+```{r loadlibrary}
+
+#load library
+# repos <- c("https://metrumresearchgroup.github.io/r_validated", options()$repos)
+# install.packages("mrggsave", repos = unique(repos), type = "source", destdir = NULL)
+
+library(pracma)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(mrgsolve)
+library(naniar)
+library(knitr)
+library(data.table)
+library(tidyverse)
+library(glue)
+library(whisker)
+library(here)
+library(scales)
+library(pmplots)
+library(pmtables)
+library(nmrec)
+library(cmdstanr)
+library(gridExtra)
+library(magrittr)
+library(yaml)
+library(magick)
+library(arrow)
+library(yspec)
+library(haven)
+library(conflicted)
+library(kableExtra)
+library(skimr)
+library(mrggsave)
+library(GGally)
+library(ggpubr)
+library(pdftools)
+library(Hmisc)
+library(PKNCA)
+library(viridisLite)
+library(webshot2)
+
+#conflict prefer
+conflict_prefer("filter", "dplyr")
+conflict_prefer("geomean", "PKNCA")
+conflict_prefer("sd", "stats")
+
+
+thisScript <- "exploratory_analysis.qmd"
+
+```
+
+## Settings
+
+```{r settings}
+
+scriptDir <- here::here("scripts/Exploratory_Analysis")
+data_dir <- here::here("data/derived") 
+model_dir <- here::here("model/nonmem/basic")  
+figure_dir <- here::here("deliv/figures/EDA")
+table_dir <- here::here("deliv/tables/EDA")
+
+#' helper functions
+source(here::here("scripts", "helpers","functions-table.R"))
+
+# table summary 
+sigfun = function(.x){sig(.x,digits=3)}
+
+```
+
+```{r csv_data, include = FALSE}
+xdata <- read_csv(file.path(data_dir, "RawData.csv"), na = c(".", " ", "-999"), guess_max = Inf)
+head(xdata)
+```
+
+## Plot row data
+
+```{r theme}
+
+##Set ggplot Theme
+theme_set(theme_bw())
+theme_update(
+      axis.text = element_text(size = 10),
+      axis.text.x = element_text(size = 6),
+      axis.text.y = element_text(size = 6),
+      axis.title.x = element_text(size = 10),
+      axis.title.y = element_text(size = 10),
+      legend.text = element_text(size = 8),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      legend.title = element_blank(),
+      legend.position = "bottom")
+
+```
+
+# Exploratory Data Analysis Tables
+
+## Continuous and categorical covariates in the population - REVIEW
+
+```{r demographic, eval=T, echo=F, include=T, dpi=600}
+
+#Table with continuous and categorical covariates for each subject separately
+
+tab <- xdata %>% 
+ distinct(ID,.keep_all = TRUE) %>%
+ mutate(SEX = case_when(
+             SEX == "1" ~ "Male",
+             SEX == "2" ~ "Female",
+             .default = NA)) %>%
+  mutate(ECMO = case_when(
+             ECMO == "1" ~ "YES",
+             ECMO == "0" ~ "NO",
+             .default = NA)) %>%
+  mutate(CRRT = case_when(
+             CRRT == "1" ~ "YES",
+             CRRT == "0" ~ "NO",
+             .default = NA)) %>%
+  replace_with_na(replace = list(PCT = -999)) %>%
+  select(ID, BW, AGE, SEX, SOFA, PCT, ECMO, CRRT, ELWI, CI, CRE, ALB, PROTEIN) %>%
+  rename("Body Weigh, kg" = BW, "Age, years" = AGE, "Sex" = SEX, "SOFA" = SOFA, "ECMO" = ECMO, "CRRT" = CRRT,   "ELWI" = ELWI, "CI" = CI, "CRE" = CRE, "ALB" = ALB, "PROTEIN" = PROTEIN)
+ 
+ demographic <-  tab %>% 
+  kableExtra::kable()%>%
+  kableExtra::kable_styling("striped")
+
+tab %>%
+  kableExtra::kable("html") %>%
+  kableExtra::kable_styling("striped") 
+
+```
+
+## Summary of continuous and categorical covariates in the population
+
+### Number and percent of subjects, observations and BLQ per study
+
+```{r BLQ, eval=T, echo=F, include=T, dpi=600}
+
+spec <- ys_load(file.path(paste0(data_dir, "/", "lookup.yml")))
+tableList <- list()
+
+xdata_cmt <- xdata %>% 
+  distinct() %>%
+  yspec_add_factors(spec,) 
+
+pk_stud <- xdata_cmt %>% 
+  pt_data_inventory(by = c("DRUG" = "CMT_f"),
+                    drop_miss = TRUE) %>%
+  st_new() %>%
+  st_files(r = NULL
+           #, output = "pk-data-sum.tex"
+           ) %>%
+  stable(notes = c("SUBJ: subjects","OBS: observations")) %>%
+  st_aspng(stem = "parent_by_detail", dir = here(table_dir, "Obs_table"), textwidth = getOption("pmtables.text.width", 1)) 
+
+
+tableList$'pk-data-sum' <- pk_stud
+
+```
+
+### Categorical covariates - summary in count (percent)
+
+```{r categorical cov, eval=T, echo=F, include=T, dpi=600}
+
+cat <- xdata %>% 
+  select(ID, SEX, ECMO, CRRT) %>%
+  distinct() %>%
+  yspec_add_factors(spec, SEX, ECMO, CRRT)
+
+cols <- c(Sex = 'SEX_f', "ExtraCorporeal Membrane Oxygenation" = 'ECMO_f', "Continuous Renal Replacement Therapy" = "CRRT_f")
+
+tab_cat <- 
+  pt_cat_long(cat, cols = cols) %>%
+  st_new() %>% 
+  st_files(r = NULL 
+           #, output = "cat-covar-sum.tex"
+           ) %>% 
+  stable() %>% 
+  st_aspng(stem = "categorical_cov", dir = here(table_dir, "Cat_table"), textwidth = getOption("pmtables.text.width", 1)
+           )
+
+tableList$'cat-covar-sum' <- tab_cat
+```
+
+### Continuous covariates - summary in count (percent)
+
+```{r continuous cov, eval=T, echo=F, include=T, dpi=600}
+
+specTex <- ys_namespace(spec,)
+
+covlab <- ys_get_short_unit(specTex, parens = TRUE, title_case = TRUE) 
+
+covID <- xdata %>% 
+  yspec_add_factors(spec, ) 
+timeIndCoDF <- distinct(covID, ID, .keep_all = TRUE) 
+
+
+tab_cont <- timeIndCoDF %>%
+  pt_cont_long(
+    cols = c("HEIGHT", "BW", "AGE", "SOFA", "PCT", "ELWI", "CI", "CRE", "ALB", "PROTEIN"), 
+    table = covlab) %>% 
+  st_new() %>% 
+  st_files(r = NULL
+           #, output = "cont-covar-sum.tex"
+           ) %>% 
+  st_notes_str() %>%
+  stable() %>% 
+  st_aspng(stem = "continuous_cov", dir = here(table_dir, "Con_table"))
+
+tableList$'cont-covar-sum' <- tab_cont
+
+```
+
+```{r}
+
+img_cat  <- image_read(here(table_dir, "Cat_table", "categorical_cov.png"))
+img_cont <- image_read(here(table_dir, "Con_table", "continuous_cov.png"))
+height <- min(image_info(img_cat)$height, image_info(img_cont)$height)
+spacer <- image_blank(width = 100, height = height, color = "white")
+img_combined <- image_append(c(img_cat, spacer, img_cont))
+
+image_write(img_combined, here(table_dir, "combined_tables.png"))
+```
+
+# Exploratory Data Analysis Figures
+
+## Continuous covariate pairs plot
+
+```{r continuous cov pdf, fig.width=7.5, fig.height=6, dpi=300}
+# namespace options
+ys_namespace(spec)
+specTex <- ys_namespace(spec, )
+
+#filter your spec object
+contCovDF <- ys_select(spec, c("BW", "AGE", "SOFA", "PCT", "ELWI", "CI", "CRE", "ALB", "PROTEIN"))
+contCovNames <- names(contCovDF) 
+
+#axes labels
+contCovarListTex <- axis_col_labs(specTex, 
+                                 contCovNames, 
+                                 title_case = TRUE, 
+                                 short = 10)
+
+dat <- xdata %>% 
+  yspec_add_factors(spec,)
+
+covar <- dat %>% 
+  distinct(ID, .keep_all = TRUE)
+
+ ContVCont <- covar %>%
+  pairs_plot(y = contCovarListTex, diag = c("barDiag"),lower_fun = GGally::wrap("points")) +
+    theme(
+    axis.text = element_text(size = 6),
+    strip.text.x = element_text(size = 6),
+    strip.text.y = element_text(size = 4.5),
+    axis.title = element_text(size = 6)) +
+   rot_x(50)
+  
+ContVCont
+ ggplot2::ggsave(ContVCont, filename = here::here("deliv/figures/EDA", "ContVCont.png"), width = 9, height = 7)
+
+```
+
+## Boxplots of continuous versus categorical covariates
+
+### Continuous versus categorical boxplots for the total population
+
+```{r cont vs cat pop }
+
+ecmo_contCat_Total <- covar %>% 
+  wrap_cont_cat(x = "ECMO_f//ExtraCorporeal Membrane Oxygenation",
+                y = contCovarListTex,
+                use_labels = TRUE) 
+
+ecmo_contCat_Total
+
+crrt_contCat_Total <- covar %>% 
+  wrap_cont_cat(x = "CRRT_f//Continuous Renal Replacement Therapy",
+                y = contCovarListTex,
+                use_labels = TRUE)
+
+
+crrt_contCat_Total
+
+gender_contCat_Total <- covar %>% 
+  wrap_cont_cat(x = "SEX_f//Sex",
+                y = contCovarListTex,
+                use_labels = TRUE) 
+
+gender_contCat_Total
+```
+
+## Concentration-time plots
+
+### Individual PK Profiles
+
+```{r Subjects plots}
+
+profiles <- map(unique(xdata$ID), function(u){
+  temp <- xdata %>%
+    filter(ID == u)
+
+  ggplot(data = temp %>%
+           filter(!is.na(DV) & EVID == 0), aes(TIME, as.numeric(DV), color = as_factor(CMT))) + 
+    geom_point(shape = 1) + 
+    geom_line(linewidth = 1) + 
+    geom_vline(data = temp %>% 
+                 filter(EVID == 1) %>%
+                 mutate(t1 = TIME, t2 = TIME+II, t3 = TIME+II*2) %>%
+                 pivot_longer(col=t1:t3, values_to = "bbb") %>%
+                 filter(!c(ADDL==0 & name=="t2" | ADDL==0 & name=="3" | ADDL==1 & name=="t3")),
+               aes(xintercept = bbb, col = "#fb9b06"),
+               linetype = "dashed", 
+               alpha = 0.7) + 
+    scale_color_manual(values = c("bisque4", "deepskyblue4", "#fb9b06"),
+                       labels = c("Ceftolozane", "Tazobactam", "Time of dose administration")) +
+    scale_x_continuous(breaks = seq(0, 24, by = 4)) +
+    labs(title = (paste0("Subject ", u, " PK Profile")), 
+         x = "Time after first dose (hours)", 
+         y = "Concentration (ug/mL)")
+})
+
+profiles
+```
+
+### Population PK Profiles
+
+```{r function mg}
+
+add_mg <- function(DOSEN) {
+  paste(DOSEN, " mg")
+}
+
+ceftazlabel <- as_labeller(c("1" = "CEFTOLOZANE", "3" = "TAZOBACTAM"))
+
+```
+
+```{r raw plot}
+plot1 <- ggplot(data = subset(xdata, EVID == 0), aes(x = TIME, y = DV, group = ID, color = as.factor(CMT))) + 
+  geom_point() + 
+  geom_point(colour = "grey33", alpha = 0.7) +
+  geom_line(data = subset(xdata, EVID == 0 & CMT == 1), aes(x = TIME, y = DV, group = ID), linewidth = 0.4) + 
+  geom_line(data = subset(xdata, EVID == 0 & CMT == 3), aes(x = TIME, y = DV, group = ID), linewidth = 0.4) +
+  scale_y_log10()+
+  ylab("Concentrations, ug/ml") +
+  xlab("Time, h") + 
+  theme(legend.position = "right") +
+  scale_x_continuous(breaks = seq(0, 24, by = 4)) +
+  scale_color_manual(labels = c("CEF", "TAZ"), values = c("bisque4", "deepskyblue4")) 
+
+print(plot1)
+
+ggplot2::ggsave(plot1, filename = here::here(figure_dir, "rawdata1.png"), width = 12, height = 10, dpi = 600, units = "cm")
+
+```
+
+```{r raw plots by ID}
+
+plot2 <- ggplot(data = subset(xdata, EVID==0), aes(x = TIME, y = DV, color = factor(CMT)), shape = 21) + 
+  geom_point(size = 0.6) +
+  geom_line(linewidth = 0.4) + 
+  scale_y_log10()+
+  ylab("Concentrations, ug/ml") +
+  xlab("Time, h") +
+  labs(color = "ID")+
+  facet_wrap(.~factor(ID),nrow = 4) +
+  scale_x_continuous(breaks = seq(0, 24, by = 4)) +
+  scale_color_manual(labels = c("CEF", "TAZ"), values = c("bisque4", "deepskyblue4")) +
+  theme(legend.position = "right",strip.background = element_rect(fill = "grey95", color = NA), 
+    strip.text = element_text(face = "plain") ) 
+
+print(plot2)
+
+ggplot2::ggsave(plot2, filename = here::here(figure_dir, "rawdata2.png"), width = 12, height = 10, dpi = 600, units = "cm")
+
+```
+
+```{r sessioinfo}
+sessionInfo()
+```

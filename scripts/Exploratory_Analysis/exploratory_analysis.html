@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Paulina Okunska">
+<meta name="dcterms.date" content="2026-01-15">
+
+<title>Ceftolozane - Tazobactam Exploratory Data Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="exploratory_analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="exploratory_analysis_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="exploratory_analysis_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="exploratory_analysis_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="exploratory_analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="exploratory_analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="exploratory_analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="exploratory_analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="exploratory_analysis_files/libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="exploratory_analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="exploratory_analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="exploratory_analysis_files/libs/bootstrap/bootstrap-9e3ffae467580fdb927a41352e75a2e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="exploratory_analysis_files/libs/kePrint-0.0.1/kePrint.js"></script>
+
+<link href="exploratory_analysis_files/libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> <strong>Introduction</strong></a>
+  <ul class="collapse">
+  <li><a href="#settings" id="toc-settings" class="nav-link" data-scroll-target="#settings"><span class="header-section-number">1.1</span> Settings</a></li>
+  <li><a href="#plot-row-data" id="toc-plot-row-data" class="nav-link" data-scroll-target="#plot-row-data"><span class="header-section-number">1.2</span> Plot row data</a></li>
+  </ul></li>
+  <li><a href="#exploratory-data-analysis-tables" id="toc-exploratory-data-analysis-tables" class="nav-link" data-scroll-target="#exploratory-data-analysis-tables"><span class="header-section-number">2</span> Exploratory Data Analysis Tables</a>
+  <ul class="collapse">
+  <li><a href="#continuous-and-categorical-covariates-in-the-population---review" id="toc-continuous-and-categorical-covariates-in-the-population---review" class="nav-link" data-scroll-target="#continuous-and-categorical-covariates-in-the-population---review"><span class="header-section-number">2.1</span> Continuous and categorical covariates in the population - REVIEW</a></li>
+  <li><a href="#summary-of-continuous-and-categorical-covariates-in-the-population" id="toc-summary-of-continuous-and-categorical-covariates-in-the-population" class="nav-link" data-scroll-target="#summary-of-continuous-and-categorical-covariates-in-the-population"><span class="header-section-number">2.2</span> Summary of continuous and categorical covariates in the population</a>
+  <ul class="collapse">
+  <li><a href="#number-and-percent-of-subjects-observations-and-blq-per-study" id="toc-number-and-percent-of-subjects-observations-and-blq-per-study" class="nav-link" data-scroll-target="#number-and-percent-of-subjects-observations-and-blq-per-study"><span class="header-section-number">2.2.1</span> Number and percent of subjects, observations and BLQ per study</a></li>
+  <li><a href="#categorical-covariates---summary-in-count-percent" id="toc-categorical-covariates---summary-in-count-percent" class="nav-link" data-scroll-target="#categorical-covariates---summary-in-count-percent"><span class="header-section-number">2.2.2</span> Categorical covariates - summary in count (percent)</a></li>
+  <li><a href="#continuous-covariates---summary-in-count-percent" id="toc-continuous-covariates---summary-in-count-percent" class="nav-link" data-scroll-target="#continuous-covariates---summary-in-count-percent"><span class="header-section-number">2.2.3</span> Continuous covariates - summary in count (percent)</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#exploratory-data-analysis-figures" id="toc-exploratory-data-analysis-figures" class="nav-link" data-scroll-target="#exploratory-data-analysis-figures"><span class="header-section-number">3</span> Exploratory Data Analysis Figures</a>
+  <ul class="collapse">
+  <li><a href="#continuous-covariate-pairs-plot" id="toc-continuous-covariate-pairs-plot" class="nav-link" data-scroll-target="#continuous-covariate-pairs-plot"><span class="header-section-number">3.1</span> Continuous covariate pairs plot</a></li>
+  <li><a href="#boxplots-of-continuous-versus-categorical-covariates" id="toc-boxplots-of-continuous-versus-categorical-covariates" class="nav-link" data-scroll-target="#boxplots-of-continuous-versus-categorical-covariates"><span class="header-section-number">3.2</span> Boxplots of continuous versus categorical covariates</a>
+  <ul class="collapse">
+  <li><a href="#continuous-versus-categorical-boxplots-for-the-total-population" id="toc-continuous-versus-categorical-boxplots-for-the-total-population" class="nav-link" data-scroll-target="#continuous-versus-categorical-boxplots-for-the-total-population"><span class="header-section-number">3.2.1</span> Continuous versus categorical boxplots for the total population</a></li>
+  </ul></li>
+  <li><a href="#concentration-time-plots" id="toc-concentration-time-plots" class="nav-link" data-scroll-target="#concentration-time-plots"><span class="header-section-number">3.3</span> Concentration-time plots</a>
+  <ul class="collapse">
+  <li><a href="#individual-pk-profiles" id="toc-individual-pk-profiles" class="nav-link" data-scroll-target="#individual-pk-profiles"><span class="header-section-number">3.3.1</span> Individual PK Profiles</a></li>
+  <li><a href="#population-pk-profiles" id="toc-population-pk-profiles" class="nav-link" data-scroll-target="#population-pk-profiles"><span class="header-section-number">3.3.2</span> Population PK Profiles</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="exploratory_analysis.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Ceftolozane - Tazobactam Exploratory Data Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Paulina Okunska </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 15, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> <strong>Introduction</strong></h1>
+<p>Antimicrobial therapy requires a precise dosage of antibiotics to achieve the therapeutic goal with a minimum level of toxic effects and low risk of developing microbial resistance. Due to the altered pharmacokinetics of drugs in critically ill patients, the dosing regimen in this group of patients may differ from the dosing regimen established in clinical trials on healthy volunteers. Ceftolozane with tazobactam is administered during therapy in patients with particularly resistant strains, especially Pseudomonas aeruginosa. Administration of antibiotics requires precise dosing. Reaching concentrations too low than needed to inhibit growth or kill the bacteria can lead to the development of antibiotic resistance. Reaching too high doses is also dangerous because it can lead to severe side effects and organ damage.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(<span class="at">message =</span> <span class="cn">FALSE</span>, <span class="at">warning =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#renv::snapshot()</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">status</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>This project does not appear to be using renv.
+Use `renv::init()` to initialize the project.</code></pre>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#load library</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># repos &lt;- c("https://metrumresearchgroup.github.io/r_validated", options()$repos)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages("mrggsave", repos = unique(repos), type = "source", destdir = NULL)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pracma)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mrgsolve)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(naniar)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glue)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(whisker)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scales)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pmplots)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pmtables)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(nmrec)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cmdstanr)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(magrittr)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(yaml)</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(magick)</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(yspec)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(haven)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(conflicted)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(kableExtra)</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(skimr)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mrggsave)</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(GGally)</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggpubr)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pdftools)</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Hmisc)</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(PKNCA)</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(viridisLite)</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(webshot2)</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a><span class="co">#conflict prefer</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="fu">conflict_prefer</span>(<span class="st">"filter"</span>, <span class="st">"dplyr"</span>)</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="fu">conflict_prefer</span>(<span class="st">"geomean"</span>, <span class="st">"PKNCA"</span>)</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="fu">conflict_prefer</span>(<span class="st">"sd"</span>, <span class="st">"stats"</span>)</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>thisScript <span class="ot">&lt;-</span> <span class="st">"exploratory_analysis.qmd"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<section id="settings" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="settings"><span class="header-section-number">1.1</span> Settings</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>scriptDir <span class="ot">&lt;-</span> here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"scripts/Exploratory_Analysis"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>data_dir <span class="ot">&lt;-</span> here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data/derived"</span>) </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>model_dir <span class="ot">&lt;-</span> here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"model/nonmem/basic"</span>)  </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>figure_dir <span class="ot">&lt;-</span> here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"deliv/figures/EDA"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>table_dir <span class="ot">&lt;-</span> here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"deliv/tables/EDA"</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#' helper functions</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"scripts"</span>, <span class="st">"helpers"</span>,<span class="st">"functions-table.R"</span>))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># table summary </span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>sigfun <span class="ot">=</span> <span class="cf">function</span>(.x){<span class="fu">sig</span>(.x,<span class="at">digits=</span><span class="dv">3</span>)}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="plot-row-data" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="plot-row-data"><span class="header-section-number">1.2</span> Plot row data</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="do">##Set ggplot Theme</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_bw</span>())</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_update</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>),</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">axis.title.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">panel.grid.major.x =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">panel.grid.minor.x =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.position =</span> <span class="st">"bottom"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+</section>
+<section id="exploratory-data-analysis-tables" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Exploratory Data Analysis Tables</h1>
+<section id="continuous-and-categorical-covariates-in-the-population---review" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="continuous-and-categorical-covariates-in-the-population---review"><span class="header-section-number">2.1</span> Continuous and categorical covariates in the population - REVIEW</h2>
+<div class="cell">
+<div class="cell-output-display">
+<table class="table table-striped caption-top table-sm small">
+<thead>
+<tr class="header">
+<th style="text-align: right;" data-quarto-table-cell-role="th">ID</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Body Weigh, kg</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Age, years</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Sex</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">SOFA</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">PCT</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">ECMO</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">CRRT</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">ELWI</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">CI</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">CRE</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">ALB</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">PROTEIN</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">150</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">12.55</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: right;">17.0</td>
+<td style="text-align: right;">2.815</td>
+<td style="text-align: right;">2.36</td>
+<td style="text-align: right;">2.7</td>
+<td style="text-align: right;">5.710</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">77.00</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: right;">16.0</td>
+<td style="text-align: right;">4.200</td>
+<td style="text-align: right;">3.25</td>
+<td style="text-align: right;">1.7</td>
+<td style="text-align: right;">4.070</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">58</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">6.75</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">6.0</td>
+<td style="text-align: right;">5.210</td>
+<td style="text-align: right;">0.85</td>
+<td style="text-align: right;">1.5</td>
+<td style="text-align: right;">4.430</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">3.65</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">10.5</td>
+<td style="text-align: right;">5.435</td>
+<td style="text-align: right;">0.74</td>
+<td style="text-align: right;">1.2</td>
+<td style="text-align: right;">6.017</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">58</td>
+<td style="text-align: left;">Female</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">0.60</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: right;">16.0</td>
+<td style="text-align: right;">5.620</td>
+<td style="text-align: right;">1.66</td>
+<td style="text-align: right;">2.6</td>
+<td style="text-align: right;">5.860</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: right;">13.0</td>
+<td style="text-align: right;">1.930</td>
+<td style="text-align: right;">1.79</td>
+<td style="text-align: right;">2.1</td>
+<td style="text-align: right;">5.390</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">18.01</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">11.5</td>
+<td style="text-align: right;">6.825</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">3.1</td>
+<td style="text-align: right;">5.810</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: left;">Female</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">4.88</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">7.0</td>
+<td style="text-align: right;">2.630</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">1.4</td>
+<td style="text-align: right;">4.390</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">58</td>
+<td style="text-align: left;">Female</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5.00</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">13.0</td>
+<td style="text-align: right;">4.840</td>
+<td style="text-align: right;">1.59</td>
+<td style="text-align: right;">1.8</td>
+<td style="text-align: right;">4.710</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: left;">Female</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">3.16</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">YES</td>
+<td style="text-align: right;">27.5</td>
+<td style="text-align: right;">3.160</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">1.6</td>
+<td style="text-align: right;">3.687</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">62</td>
+<td style="text-align: right;">73</td>
+<td style="text-align: left;">Female</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">7.27</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">9.0</td>
+<td style="text-align: right;">3.740</td>
+<td style="text-align: right;">1.26</td>
+<td style="text-align: right;">2.2</td>
+<td style="text-align: right;">4.360</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">62</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">3.42</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">15.0</td>
+<td style="text-align: right;">3.050</td>
+<td style="text-align: right;">0.79</td>
+<td style="text-align: right;">2.2</td>
+<td style="text-align: right;">5.580</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">58</td>
+<td style="text-align: right;">66</td>
+<td style="text-align: left;">Male</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">9.75</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: left;">NO</td>
+<td style="text-align: right;">8.5</td>
+<td style="text-align: right;">4.080</td>
+<td style="text-align: right;">1.50</td>
+<td style="text-align: right;">2.5</td>
+<td style="text-align: right;">6.960</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="summary-of-continuous-and-categorical-covariates-in-the-population" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="summary-of-continuous-and-categorical-covariates-in-the-population"><span class="header-section-number">2.2</span> Summary of continuous and categorical covariates in the population</h2>
+<section id="number-and-percent-of-subjects-observations-and-blq-per-study" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="number-and-percent-of-subjects-observations-and-blq-per-study"><span class="header-section-number">2.2.1</span> Number and percent of subjects, observations and BLQ per study</h3>
+</section>
+<section id="categorical-covariates---summary-in-count-percent" class="level3" data-number="2.2.2">
+<h3 data-number="2.2.2" class="anchored" data-anchor-id="categorical-covariates---summary-in-count-percent"><span class="header-section-number">2.2.2</span> Categorical covariates - summary in count (percent)</h3>
+</section>
+<section id="continuous-covariates---summary-in-count-percent" class="level3" data-number="2.2.3">
+<h3 data-number="2.2.3" class="anchored" data-anchor-id="continuous-covariates---summary-in-count-percent"><span class="header-section-number">2.2.3</span> Continuous covariates - summary in count (percent)</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>img_cat  <span class="ot">&lt;-</span> <span class="fu">image_read</span>(<span class="fu">here</span>(table_dir, <span class="st">"Cat_table"</span>, <span class="st">"categorical_cov.png"</span>))</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>img_cont <span class="ot">&lt;-</span> <span class="fu">image_read</span>(<span class="fu">here</span>(table_dir, <span class="st">"Con_table"</span>, <span class="st">"continuous_cov.png"</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>height <span class="ot">&lt;-</span> <span class="fu">min</span>(<span class="fu">image_info</span>(img_cat)<span class="sc">$</span>height, <span class="fu">image_info</span>(img_cont)<span class="sc">$</span>height)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>spacer <span class="ot">&lt;-</span> <span class="fu">image_blank</span>(<span class="at">width =</span> <span class="dv">100</span>, <span class="at">height =</span> height, <span class="at">color =</span> <span class="st">"white"</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>img_combined <span class="ot">&lt;-</span> <span class="fu">image_append</span>(<span class="fu">c</span>(img_cat, spacer, img_cont))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">image_write</span>(img_combined, <span class="fu">here</span>(table_dir, <span class="st">"combined_tables.png"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+</section>
+</section>
+<section id="exploratory-data-analysis-figures" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Exploratory Data Analysis Figures</h1>
+<section id="continuous-covariate-pairs-plot" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="continuous-covariate-pairs-plot"><span class="header-section-number">3.1</span> Continuous covariate pairs plot</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># namespace options</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ys_namespace</span>(spec)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>specTex <span class="ot">&lt;-</span> <span class="fu">ys_namespace</span>(spec, )</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#filter your spec object</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>contCovDF <span class="ot">&lt;-</span> <span class="fu">ys_select</span>(spec, <span class="fu">c</span>(<span class="st">"BW"</span>, <span class="st">"AGE"</span>, <span class="st">"SOFA"</span>, <span class="st">"PCT"</span>, <span class="st">"ELWI"</span>, <span class="st">"CI"</span>, <span class="st">"CRE"</span>, <span class="st">"ALB"</span>, <span class="st">"PROTEIN"</span>))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>contCovNames <span class="ot">&lt;-</span> <span class="fu">names</span>(contCovDF) </span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#axes labels</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>contCovarListTex <span class="ot">&lt;-</span> <span class="fu">axis_col_labs</span>(specTex, </span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>                                 contCovNames, </span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">title_case =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">short =</span> <span class="dv">10</span>)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> xdata <span class="sc">%&gt;%</span> </span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">yspec_add_factors</span>(spec,)</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>covar <span class="ot">&lt;-</span> dat <span class="sc">%&gt;%</span> </span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(ID, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a> ContVCont <span class="ot">&lt;-</span> covar <span class="sc">%&gt;%</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pairs_plot</span>(<span class="at">y =</span> contCovarListTex, <span class="at">diag =</span> <span class="fu">c</span>(<span class="st">"barDiag"</span>),<span class="at">lower_fun =</span> GGally<span class="sc">::</span><span class="fu">wrap</span>(<span class="st">"points"</span>)) <span class="sc">+</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>),</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>),</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="fl">4.5</span>),</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>)) <span class="sc">+</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>   <span class="fu">rot_x</span>(<span class="dv">50</span>)</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>ContVCont</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/continuous%20cov%20pdf-1.png" class="img-fluid figure-img" width="2250"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a> ggplot2<span class="sc">::</span><span class="fu">ggsave</span>(ContVCont, <span class="at">filename =</span> here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"deliv/figures/EDA"</span>, <span class="st">"ContVCont.png"</span>), <span class="at">width =</span> <span class="dv">9</span>, <span class="at">height =</span> <span class="dv">7</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="boxplots-of-continuous-versus-categorical-covariates" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="boxplots-of-continuous-versus-categorical-covariates"><span class="header-section-number">3.2</span> Boxplots of continuous versus categorical covariates</h2>
+<section id="continuous-versus-categorical-boxplots-for-the-total-population" class="level3" data-number="3.2.1">
+<h3 data-number="3.2.1" class="anchored" data-anchor-id="continuous-versus-categorical-boxplots-for-the-total-population"><span class="header-section-number">3.2.1</span> Continuous versus categorical boxplots for the total population</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>ecmo_contCat_Total <span class="ot">&lt;-</span> covar <span class="sc">%&gt;%</span> </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_cont_cat</span>(<span class="at">x =</span> <span class="st">"ECMO_f//ExtraCorporeal Membrane Oxygenation"</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">y =</span> contCovarListTex,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">use_labels =</span> <span class="cn">TRUE</span>) </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>ecmo_contCat_Total</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/cont%20vs%20cat%20pop-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>crrt_contCat_Total <span class="ot">&lt;-</span> covar <span class="sc">%&gt;%</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_cont_cat</span>(<span class="at">x =</span> <span class="st">"CRRT_f//Continuous Renal Replacement Therapy"</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">y =</span> contCovarListTex,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">use_labels =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>crrt_contCat_Total</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/cont%20vs%20cat%20pop-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>gender_contCat_Total <span class="ot">&lt;-</span> covar <span class="sc">%&gt;%</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_cont_cat</span>(<span class="at">x =</span> <span class="st">"SEX_f//Sex"</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">y =</span> contCovarListTex,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                <span class="at">use_labels =</span> <span class="cn">TRUE</span>) </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>gender_contCat_Total</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/cont%20vs%20cat%20pop-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="concentration-time-plots" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="concentration-time-plots"><span class="header-section-number">3.3</span> Concentration-time plots</h2>
+<section id="individual-pk-profiles" class="level3" data-number="3.3.1">
+<h3 data-number="3.3.1" class="anchored" data-anchor-id="individual-pk-profiles"><span class="header-section-number">3.3.1</span> Individual PK Profiles</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>profiles <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">unique</span>(xdata<span class="sc">$</span>ID), <span class="cf">function</span>(u){</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  temp <span class="ot">&lt;-</span> xdata <span class="sc">%&gt;%</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(ID <span class="sc">==</span> u)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span> temp <span class="sc">%&gt;%</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>           <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(DV) <span class="sc">&amp;</span> EVID <span class="sc">==</span> <span class="dv">0</span>), <span class="fu">aes</span>(TIME, <span class="fu">as.numeric</span>(DV), <span class="at">color =</span> <span class="fu">as_factor</span>(CMT))) <span class="sc">+</span> </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">data =</span> temp <span class="sc">%&gt;%</span> </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">filter</span>(EVID <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">mutate</span>(<span class="at">t1 =</span> TIME, <span class="at">t2 =</span> TIME<span class="sc">+</span>II, <span class="at">t3 =</span> TIME<span class="sc">+</span>II<span class="sc">*</span><span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">pivot_longer</span>(<span class="at">col=</span>t1<span class="sc">:</span>t3, <span class="at">values_to =</span> <span class="st">"bbb"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">c</span>(ADDL<span class="sc">==</span><span class="dv">0</span> <span class="sc">&amp;</span> name<span class="sc">==</span><span class="st">"t2"</span> <span class="sc">|</span> ADDL<span class="sc">==</span><span class="dv">0</span> <span class="sc">&amp;</span> name<span class="sc">==</span><span class="st">"3"</span> <span class="sc">|</span> ADDL<span class="sc">==</span><span class="dv">1</span> <span class="sc">&amp;</span> name<span class="sc">==</span><span class="st">"t3"</span>)),</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>               <span class="fu">aes</span>(<span class="at">xintercept =</span> bbb, <span class="at">col =</span> <span class="st">"#fb9b06"</span>),</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>               <span class="at">linetype =</span> <span class="st">"dashed"</span>, </span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>               <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span> </span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"bisque4"</span>, <span class="st">"deepskyblue4"</span>, <span class="st">"#fb9b06"</span>),</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>                       <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Ceftolozane"</span>, <span class="st">"Tazobactam"</span>, <span class="st">"Time of dose administration"</span>)) <span class="sc">+</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">24</span>, <span class="at">by =</span> <span class="dv">4</span>)) <span class="sc">+</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> (<span class="fu">paste0</span>(<span class="st">"Subject "</span>, u, <span class="st">" PK Profile"</span>)), </span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> <span class="st">"Time after first dose (hours)"</span>, </span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>         <span class="at">y =</span> <span class="st">"Concentration (ug/mL)"</span>)</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>profiles</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[2]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[3]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[4]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-4.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[5]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-5.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[6]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-6.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[7]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-7.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[8]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-8.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[9]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-9.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[10]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-10.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[11]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-11.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[12]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-12.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[13]]</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/Subjects%20plots-13.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="population-pk-profiles" class="level3" data-number="3.3.2">
+<h3 data-number="3.3.2" class="anchored" data-anchor-id="population-pk-profiles"><span class="header-section-number">3.3.2</span> Population PK Profiles</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>add_mg <span class="ot">&lt;-</span> <span class="cf">function</span>(DOSEN) {</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">paste</span>(DOSEN, <span class="st">" mg"</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>ceftazlabel <span class="ot">&lt;-</span> <span class="fu">as_labeller</span>(<span class="fu">c</span>(<span class="st">"1"</span> <span class="ot">=</span> <span class="st">"CEFTOLOZANE"</span>, <span class="st">"3"</span> <span class="ot">=</span> <span class="st">"TAZOBACTAM"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>plot1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">subset</span>(xdata, EVID <span class="sc">==</span> <span class="dv">0</span>), <span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> DV, <span class="at">group =</span> ID, <span class="at">color =</span> <span class="fu">as.factor</span>(CMT))) <span class="sc">+</span> </span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">colour =</span> <span class="st">"grey33"</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> <span class="fu">subset</span>(xdata, EVID <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> CMT <span class="sc">==</span> <span class="dv">1</span>), <span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> DV, <span class="at">group =</span> ID), <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span> </span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> <span class="fu">subset</span>(xdata, EVID <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> CMT <span class="sc">==</span> <span class="dv">3</span>), <span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> DV, <span class="at">group =</span> ID), <span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>()<span class="sc">+</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"Concentrations, ug/ml"</span>) <span class="sc">+</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Time, h"</span>) <span class="sc">+</span> </span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"right"</span>) <span class="sc">+</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">24</span>, <span class="at">by =</span> <span class="dv">4</span>)) <span class="sc">+</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"CEF"</span>, <span class="st">"TAZ"</span>), <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"bisque4"</span>, <span class="st">"deepskyblue4"</span>)) </span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(plot1)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/raw%20plot-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>ggplot2<span class="sc">::</span><span class="fu">ggsave</span>(plot1, <span class="at">filename =</span> here<span class="sc">::</span><span class="fu">here</span>(figure_dir, <span class="st">"rawdata1.png"</span>), <span class="at">width =</span> <span class="dv">12</span>, <span class="at">height =</span> <span class="dv">10</span>, <span class="at">dpi =</span> <span class="dv">600</span>, <span class="at">units =</span> <span class="st">"cm"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>plot2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">subset</span>(xdata, EVID<span class="sc">==</span><span class="dv">0</span>), <span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> DV, <span class="at">color =</span> <span class="fu">factor</span>(CMT)), <span class="at">shape =</span> <span class="dv">21</span>) <span class="sc">+</span> </span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">0.4</span>) <span class="sc">+</span> </span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>()<span class="sc">+</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"Concentrations, ug/ml"</span>) <span class="sc">+</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Time, h"</span>) <span class="sc">+</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">color =</span> <span class="st">"ID"</span>)<span class="sc">+</span></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(.<span class="sc">~</span><span class="fu">factor</span>(ID),<span class="at">nrow =</span> <span class="dv">4</span>) <span class="sc">+</span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">24</span>, <span class="at">by =</span> <span class="dv">4</span>)) <span class="sc">+</span></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"CEF"</span>, <span class="st">"TAZ"</span>), <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"bisque4"</span>, <span class="st">"deepskyblue4"</span>)) <span class="sc">+</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"right"</span>,<span class="at">strip.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"grey95"</span>, <span class="at">color =</span> <span class="cn">NA</span>), </span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">"plain"</span>) ) </span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(plot2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="exploratory_analysis_files/figure-html/raw%20plots%20by%20ID-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>ggplot2<span class="sc">::</span><span class="fu">ggsave</span>(plot2, <span class="at">filename =</span> here<span class="sc">::</span><span class="fu">here</span>(figure_dir, <span class="st">"rawdata2.png"</span>), <span class="at">width =</span> <span class="dv">12</span>, <span class="at">height =</span> <span class="dv">10</span>, <span class="at">dpi =</span> <span class="dv">600</span>, <span class="at">units =</span> <span class="st">"cm"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.3.2 (2023-10-31 ucrt)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+
+
+locale:
+[1] LC_COLLATE=Polish_Poland.utf8  LC_CTYPE=Polish_Poland.utf8   
+[3] LC_MONETARY=Polish_Poland.utf8 LC_NUMERIC=C                  
+[5] LC_TIME=Polish_Poland.utf8    
+
+time zone: Europe/Warsaw
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] webshot2_0.1.2      viridisLite_0.4.2   PKNCA_0.11.0       
+ [4] Hmisc_5.2-1         pdftools_3.4.1      ggpubr_0.6.0       
+ [7] GGally_2.2.1        mrggsave_0.4.5.9000 skimr_2.1.5        
+[10] kableExtra_1.4.0    conflicted_1.2.0    haven_2.5.4        
+[13] yspec_0.6.1.9000    arrow_18.1.0        magick_2.8.5       
+[16] yaml_2.3.8          magrittr_2.0.3      gridExtra_2.3      
+[19] cmdstanr_0.8.1.9000 nmrec_0.4.0         pmtables_0.6.0.9000
+[22] pmplots_0.4.0.9001  scales_1.3.0        here_1.0.1         
+[25] whisker_0.4.1       glue_1.7.0          lubridate_1.9.3    
+[28] forcats_1.0.0       stringr_1.5.1       purrr_1.0.2        
+[31] readr_2.1.5         tidyr_1.3.1         tibble_3.2.1       
+[34] tidyverse_2.0.0     data.table_1.16.2   knitr_1.49         
+[37] naniar_1.1.0        mrgsolve_1.5.2.9000 patchwork_1.3.0    
+[40] ggplot2_3.5.1       dplyr_1.1.4         pracma_2.4.4       
+
+loaded via a namespace (and not attached):
+ [1] rlang_1.1.4          compiler_4.3.2       systemfonts_1.1.0   
+ [4] vctrs_0.6.5          pkgconfig_2.0.3      crayon_1.5.3        
+ [7] fastmap_1.2.0        backports_1.4.1      labeling_0.4.3      
+[10] promises_1.3.2       rmarkdown_2.29       tzdb_0.4.0          
+[13] ps_1.7.6             ragg_1.3.3           visdat_0.6.0        
+[16] bit_4.5.0.1          xfun_0.49            cachem_1.1.0        
+[19] jsonlite_1.8.8       later_1.4.1          parallel_4.3.2      
+[22] broom_1.0.7          cluster_2.1.6        R6_2.6.1            
+[25] stringi_1.8.4        RColorBrewer_1.1-3   rpart_4.1.23        
+[28] car_3.1-3            Rcpp_1.0.12          assertthat_0.2.1    
+[31] base64enc_0.1-3      nnet_7.3-19          timechange_0.3.0    
+[34] tidyselect_1.2.1     rstudioapi_0.17.1    abind_1.4-8         
+[37] websocket_1.4.2      processx_3.8.4       qpdf_1.3.4          
+[40] lattice_0.22-6       plyr_1.8.9           withr_3.0.2         
+[43] askpass_1.2.1        posterior_1.6.1      evaluate_1.0.1      
+[46] foreign_0.8-86       gridGraphics_0.5-1   ggstats_0.7.0       
+[49] xml2_1.3.6           pillar_1.10.2        carData_3.0-5       
+[52] tensorA_0.36.2.1     checkmate_2.3.1      renv_1.0.7          
+[55] distributional_0.5.0 generics_0.1.3       vroom_1.6.5         
+[58] rprojroot_2.0.4      chromote_0.5.1       hms_1.1.3           
+[61] munsell_0.5.1        xtable_1.8-4         tools_4.3.2         
+[64] ggsignif_0.6.4       fs_1.6.4             grid_4.3.2          
+[67] colorspace_2.1-0     nlme_3.1-164         repr_1.1.7          
+[70] htmlTable_2.4.3      Formula_1.2-5        cli_3.6.3           
+[73] textshaping_0.4.0    svglite_2.1.3        gtable_0.3.6        
+[76] rstatix_0.7.2        digest_0.6.37        htmlwidgets_1.6.4   
+[79] farver_2.1.2         memoise_2.0.1        htmltools_0.5.8.1   
+[82] lifecycle_1.0.4      bit64_4.5.2         </code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

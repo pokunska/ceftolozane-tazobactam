@@ -1,0 +1,124 @@
+---
+title: "CEFTAZ PK model summary"
+author: "Paulina Okunska"
+date: today
+format: 
+  html:
+    toc: true
+    code-fold: true
+    number-sections: true
+    colorlinks: true
+  pdf:
+    toc: true
+    colorlinks: true
+    toc_depth: 2
+    number_sections: true
+    keep_tex: yes
+    tbl-colwidths: auto 
+output:
+  word_document: default
+execute: 
+  warning: false
+editor: visual
+theme: lux
+---
+
+```{r, eval = T, echo = F, output = F}
+
+library(tidyverse)
+library(kableExtra)
+library(yaml)
+library(bbr)
+library(here)
+library(pmtables)
+library(dplyr)
+library(gridExtra)
+library(grid)
+library(ragg)
+library(flextable)
+
+filter <- dplyr::filter
+select <- dplyr::select
+geomean <- PKNCA::geomean
+add_summary <- bbr::add_summary
+group_rows <- kableExtra::group_rows
+sig <- pmtables::sig
+
+conflicts_prefer(flextable::footnote)
+
+model_dir <- here::here("model/nonmem/PK")
+source(here::here("scripts/helpers/helper_model_diagnostic.R"))
+
+tab_dir <- here::here("deliv/tables/mod-summary")
+
+
+options(bbr.bbi_exe_path = "C:/Users/pauoku/AppData/Roaming/bbi/bbi.exe")
+
+bbr::use_bbi()
+
+bbi_init(.dir = model_dir,             # the directory to create the bbi.yaml in
+         .nonmem_dir = "C:/",          # location of NONMEM installation
+         .nonmem_version = "nm75g64",  # default NONMEM version to use
+.bbi_args = list(
+     mpi_exec_path ="C:/nm74g64/run/psexec",
+      parafile = "C:/nm74g64/run/fpiwini8.pnm",
+      parallel = TRUE,
+      threads = 2
+    ))
+
+
+
+
+```
+
+```{r table summary, eval = T, echo = F, output = T, include=T, dpi=300}
+
+#names(run_log(model_dir))
+log_df <- run_log(model_dir, .include = c("100", "102")) %>% #select as many models as you want to include here
+  add_summary() %>% #pulls outputs from model_summary
+  collapse_to_string(tags) %>%
+  mutate(Model = case_when(run %in% c('100') ~ "1CMT",
+                           run %in% c('102') ~ "2CMT"),
+    OFV = sig(ofv, digits = 6),
+    Run = run,
+    Tags = tags,
+    Notes = notes, 
+    Estimation_Method = estimation_method,
+    Any_heuristics = any_heuristics,
+    Type = model_type,
+    N_param = param_count, 
+    Subjects = number_of_subjects) %>%
+  select(Run, Model, Subjects, Tags, Estimation_Method,Type, OFV, N_param, Any_heuristics) 
+  
+# tab <-  kableExtra::kable(log_df) %>% kableExtra::column_spec(4, width = "5cm") %>% #  (Tags)
+#     kableExtra::column_spec(5, width = "2cm") %>%  #  (OFV)
+#     kableExtra::kable_styling(latex_options = c("striped", "scale_down", "repeat_header")) %>% 
+#     kableExtra::kable_styling(full_width = TRUE) %>%  kableExtra::save_kable(here::here(tab_dir, file = "table.tex"))
+
+
+
+
+ft<- flextable::flextable(log_df)  %>% 
+    flextable::set_table_properties(width = 1, layout = "autofit") %>% 
+  flextable::set_table_properties(layout = "fixed") %>%
+  flextable::set_header_df(map_df(names(log_df), \(x) tibble::tibble(col_keys = x, text = x))) %>%
+  flextable::set_header_labels(Any_heuristics = "Any heuristics") %>% 
+  flextable::set_header_labels(Estimation_Method = "Estimation Method") %>% 
+  flextable::set_header_labels(N_param = "Parameters Number") %>% 
+  flextable::theme_alafoli() %>%
+  align(align = "center", part = "all") %>% 
+  color(part = "all", color = "black") %>% 
+  footnote(i = 1, j = 7,
+            value = as_paragraph(
+              c("OFV - Objective function value")
+            ),
+            ref_symbols = c("a"),
+            part = "header")
+
+save_as_image(
+  ft,
+  path = file.path(tab_dir, "tab_summary.png"),
+  expand = 1,
+  res=300)
+
+```

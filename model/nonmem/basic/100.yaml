@@ -1,0 +1,8 @@
+model_type: nonmem
+tags:
+- 1 cmp dispos. model
+- IV admin
+- etas estimated for CL & V for CEF & TAZ
+- SDCLT:SDV1T
+notes:
+- ' '

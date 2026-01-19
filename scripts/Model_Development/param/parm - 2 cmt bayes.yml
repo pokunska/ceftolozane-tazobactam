@@ -1,0 +1,158 @@
+##' variable name = model parameter, e.g. THETA, OMEGA, SIGMA
+##'
+##' abb = abbreviation you want to appear in the parameter table (use latex coding)
+##'
+##' desc = description you want to appear in the parameter table
+##'
+##' panel = indicate which panel each parameter should appear under.
+##' Current options include:
+##'   panel=="struct" ~ "Structural model parameters"
+##'   panel=="cov" ~ "Covariate effect parameters"
+##'   panel=="IIV" ~ "Interindividual covariance parameters" (off-diagonals << function takes care of this)
+##'   panel=="IIV" ~ "Interindividual variance parameters" (diagonals << function takes care of this)
+##'   panel=="IOV"  ~ "Interoccasion variance parameters"
+##'   panel=="RV" ~ "Residual variance"
+##'
+##' trans = define how do you want the parameter to be transformed
+##'   there are a finite options currently coded up (see below) but you're welcome
+##'   add new options. Current options include:
+##'        "none"       - untransformed parameters, e.g. THETAs or off-diagonals
+##'        "logTrans"   - THETAs estimated in the log domain
+##'        "logitTrans" - THETAs estimated using a logit transform
+##'        "lognormalOm"- for log-normal omegas e.g. CL = THETA(1) * exp(ETA(1)) - returns est.+CV%
+##'        "OmSD"       - for omegas where you want to return SD only - returns estimate & SD
+##'                     - use this for additive omegas e.g. CL = THETA(1) + ETA(1)
+##'        "logitOmSD"  - for omegas using logit transform - returns estimate & SD (calculated with logitnorm package)
+##'                     - this option requires you provide the associated THETA separated with a "~"
+##'                     - e.g. "logitOmSD ~ THETA3"
+##'        "addErr"     - for additive error terms (coded using SIGMA in $ERROR) - returns est.+ SD
+##'        "propErr"    - for proportional error terms (coded using SIGMA in $ERROR) - returns est.+CV%
+##'
+
+THETA1:
+  name: THETA1
+  abb: "V1C (L)"
+  desc: "Ceftolozane: Central volume of distribution"
+  panel: struct
+  trans: logTrans
+  
+THETA2:
+  name: THETA2
+  abb: "CLC (L/h)"
+  desc: "Ceftolozane: Clearance"
+  panel: struct
+  trans: logTrans
+  
+THETA3:
+  name: THETA3
+  abb: "Q2C (L)"
+  desc: "Ceftolozane: Intercompartmental Clearance"
+  panel: struct
+  trans: logTrans
+  
+THETA4:
+  name: THETA4
+  abb: "V2C (L/h)"
+  desc: "Ceftolozane: Peripheral volume of distribution"
+  panel: struct
+  trans: logTrans
+  
+THETA5:
+  name: THETA5
+  abb: "V1T (L)"
+  desc: "Tazobactam: Central volume of distribution"
+  panel: struct
+  trans: logTrans
+  
+THETA6:
+  name: THETA6
+  abb: "CLT (L/h)"
+  desc: "Tazobactam: Clearance"
+  panel: struct
+  trans: logTrans
+  
+THETA7:
+  name: THETA7
+  abb: "Q2T (L)"
+  desc: "Tazobactam: Intercompartmental Clearance"
+  panel: struct
+  trans: logTrans
+  
+THETA8:
+  name: THETA8
+  abb: "V2T (L/h)"
+  desc: "Tazobactam: Peripheral volume of distribution"
+  panel: struct
+  trans: logTrans
+  
+  
+OMEGA11:
+  name: OMEGA11
+  abb: "IIV-V1C"
+  desc: "Variance for V1C"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA22:
+  name: OMEGA22
+  abb: "IIV-CL1C"
+  desc: "Variance for CL1C"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA33:
+  name: OMEGA33
+  abb: "IIV-Q2C"
+  desc: "Variance for Q2C"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA44:
+  name: OMEGA44
+  abb: "IIV-V2C"
+  desc: "Variance for V2C"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA55:
+  name: OMEGA55
+  abb: "IIV-V1T"
+  desc: "Variance for V1T"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA66:
+  name: OMEGA66
+  abb: "IIV-CL1T"
+  desc: "Variance for CL1T"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA77:
+  name: OMEGA77
+  abb: "IIV-Q2T"
+  desc: "Variance for Q2T"
+  panel: IIV
+  trans: lognormalOm
+  
+OMEGA88:
+  name: OMEGA88
+  abb: "IIV-V2T"
+  desc: "Variance for V2T"
+  panel: IIV
+  trans: lognormalOm
+  
+SIGMA11:
+  name: SIGMA11
+  abb: "ResC"
+  desc: "Ceftolozane: Proportional"
+  panel: RV
+  trans: propErr
+  
+SIGMA22:
+  name: SIGMA22
+  abb: "ResT"
+  desc: "Tazobaktam: Proportional"
+  panel: RV
+  trans: propErr
+  

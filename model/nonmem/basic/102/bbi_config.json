@@ -1,0 +1,43 @@
+{
+    "bbi_version": "v3.4.0",
+    "model_name": "102.mod",
+    "original_model": "102.mod",
+    "model_path": "D:/PROJECTS/ceftaz/model/nonmem/basic/102.mod",
+    "data_path": "..\\..\\..\\..\\data\\derived\\RawData.csv",
+    "data_md5": "48f036e906762830f499bfb23802ee7f",
+    "model_md5": "88ace3426c42f20d7e3921eb9ac7f0d3",
+    "model_filename": "102",
+    "model_extension": "mod",
+    "original_path": "D:/PROJECTS/ceftaz/model/nonmem/basic",
+    "output_dir": "D:/PROJECTS/ceftaz/model/nonmem/basic/102",
+    "configuration": {
+        "overwrite": true,
+        "clean_lvl": 1,
+        "git": true,
+        "save_config": true,
+        "output_dir": "{{ .Name }}",
+        "threads": 1,
+        "local": {
+            "create_child_dirs": true
+        },
+        "nonmem": {
+            "nm74g64": {
+                "home": "C:\\nm74g64",
+                "executable": "nmfe74.bat"
+            },
+            "nm75g64": {
+                "home": "C:\\nm75g64",
+                "executable": "nmfe75.bat",
+                "default": true
+            }
+        },
+        "parallel": false,
+        "nmfe_options": {
+            "maxlim": 2
+        },
+        "mpi_exec_path": "C:/nm74g64/run/psexec",
+        "parallel_timeout": 2147483647,
+        "parafile": "C:/nm74g64/run/fpiwini8.pnm"
+    },
+    "error": null
+}
