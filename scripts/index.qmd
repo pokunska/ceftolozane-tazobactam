@@ -19,4 +19,4 @@ execute:
 
 **Introduction**
 
-[BAYES](D:/PROJECTS/ceftolozane-tazobactam/scripts/Model_Diagnostic_Bayes)
+[BAYES](D:/PROJECTS/ceftolozane-tazobactam/scripts/Model_Diagnostic_Bayes/ceftaz-analysis-bayes_stan.html)
