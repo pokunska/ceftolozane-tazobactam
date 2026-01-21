@@ -1,5 +1,5 @@
 ---
-title: "Pharmacokinetics of ceftolozane with tazobactam in critically ill patients - Bayesian approach"
+title: "Nonlinear Mixed-Effects and Full Bayesian Population Pharmacokinetic Analysis of Ceftolozane–Tazobactam in Critically Ill Patients"
 author:  
   - Paulina Okuńska (okunskapaul@gmail.com)
   - Pawel Wiczling
@@ -17,6 +17,11 @@ execute:
   warning: false
 ---
 
-**Introduction**
 
-[BAYES](D:/PROJECTS/ceftolozane-tazobactam/scripts/Model_Diagnostic_Bayes/ceftaz-analysis-bayes_stan.html)
+[EDA](D:/PROJECTS/ceftolozane-tazobactam/scripts/Exploratory_Analysis/exploratory_analysis.html)
+
+[NONMEM 1CMT](D:/PROJECTS/ceftolozane-tazobactam/model/nonmem/basic/100/model_diagnostic_1cmt.html)
+
+[NONMEM 2CMT](D:/PROJECTS/ceftolozane-tazobactam/model/nonmem/basic/102/model_diagnostic_2cmt.html)
+
+[BAYESIAN APPROACH](D:/PROJECTS/ceftolozane-tazobactam/scripts/Model_Diagnostic_Bayes/ceftaz-analysis-bayes_stan.html)
