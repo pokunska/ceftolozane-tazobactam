@@ -1,0 +1,22 @@
+---
+title: "Pharmacokinetics of ceftolozane with tazobactam in critically ill patients - Bayesian approach"
+author:  
+  - Paulina Okuńska (okunskapaul@gmail.com)
+  - Pawel Wiczling
+date: today
+date-format: long
+format:
+  html:
+    toc: true
+    code-fold: true
+  pdf:
+    tov: true
+    lof: true
+    lot: true
+execute:
+  warning: false
+---
+
+**Introduction**
+
+[BAYES](D:/PROJECTS/ceftolozane-tazobactam/scripts/Model_Diagnostic_Bayes)
