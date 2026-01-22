@@ -61,6 +61,7 @@ knitr::opts_chunk$set(
   eval = TRUE,
   warning = FALSE,
   message = FALSE,
+  cache = TRUE, 
   dpi = 300)
 
 library(pracma)
@@ -225,7 +226,7 @@ ptable
 ```
 
 
-```{r parameters tables}
+```{r parameters table}
 
 pars1 <- c("CLCHat", "QCHat", "V1CHat", "V2CHat",
            "CLTHat", "QTHat", "V1THat", "V2THat",
@@ -288,11 +289,17 @@ fixed <- param_df %>%
   st_files(r = NULL) %>%
   st_notes(footAbbrev) %>%
   st_noteconf(type = "minipage") %>%
-  stable() %>%
-  st_as_image()
+  stable() 
 
-fixed
+```
 
+::: {.content-visible when-format="html"}
+```{r htmltable parameters table, out.width='100%'}
+st_as_image(fixed)
+```
+:::
+
+```{r rests table}
 ptable_rest <- mod5_res$summary(rest) %>%
   mutate_if(is.numeric, ~formatC(., 3)) %>%
   rename(parameter = variable) %>%
@@ -318,12 +325,15 @@ rests <- ptable_rest %>%
   st_files(r = NULL) %>%
   st_notes(footAbbrev) %>%
   st_noteconf(type = "minipage") %>%
-  stable() %>%
-  st_as_image()
-
-rests
+  stable() 
 
 ```
+
+::: {.content-visible when-format="html"}
+```{r htmltable rests table, out.width='100%'}
+st_as_image(rests)
+```
+:::
 
 
 ```{r add 95CI}
@@ -441,10 +451,17 @@ fixed <- param_df %>%
   st_files(r = NULL) %>%
   st_notes(footAbbrev) %>%
   st_noteconf(type = "minipage") %>%
-  stable() %>%
-  st_as_image()
+  stable()  
 
-fixed 
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable add 95CI, out.width='100%'}
+st_as_image(fixed)
+```
+:::
+
+```{r add 95CI rests}
 
 ptable_rest <- ptable_all %>%
   filter(parameter %in% rest) %>%
@@ -468,12 +485,15 @@ rests <- ptable_rest %>%
   st_files(r = NULL) %>%
   st_notes(footAbbrev) %>%
   st_noteconf(type = "minipage") %>%
-  stable() %>%
-  st_as_image()
-
-rests
+  stable() 
 
 ```
+
+::: {.content-visible when-format="html"}
+```{r htmltable add 95CI rests, out.width='100%'}
+st_as_image(rests)
+```
+:::
 
 
 ```{r table-corr}
@@ -630,6 +650,11 @@ etaM  %>%
   filter(type %in% c("CLC", "CLT", "V1C", "V1T")) %>% 
   pivot_wider(values_from = 3:6, names_from = "type") %>% 
   pairs_plot(c("medianInd_CLC//CLC", "medianInd_CLT//CLT", "medianInd_V1C//V1C","medianInd_V1T//V1T"))
+
+etaM  %>% 
+  filter(type %in% c("CLC", "CLT", "V1C", "V1T", "QC", "QT", "V2C", "V2T")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  pairs_plot(c("medianInd_CLC//CLC", "medianInd_CLT//CLT", "medianInd_V1C//V1C","medianInd_V1T//V1T", "medianInd_QC//QC", "medianInd_QT//QT", "medianInd_V2C//V2C","medianInd_V2T//V2T"))
 
 ```
 
@@ -1813,12 +1838,17 @@ png_table <- param_df %>%
   st_new() %>%
   st_panel("type", duplicates_ok = TRUE) %>%
   st_center(Parameter = "l") %>%
-  stable() %>%
-  st_as_image()
-
-png_table
+  stable() 
 
 ```
+
+
+::: {.content-visible when-format="html"}
+```{r htmltable bs1cmt params, out.width='100%'}
+st_as_image(png_table)
+```
+:::
+
 
 ## PTA final plots
 
@@ -2409,11 +2439,15 @@ png_table <- param_df %>%
   st_new() %>%
   st_panel("type", duplicates_ok = TRUE) %>%
   st_center(Parameter = "l") %>%
-  stable() %>%
-  st_as_image()
-png_table
+  stable() 
 
 ```
+
+::: {.content-visible when-format="html"}
+```{r htmltable bs2cmt params, out.width='100%'}
+st_as_image(png_table)
+```
+:::
 
 ## Session Info
 
