@@ -14,10 +14,10 @@ execute:
 ---
 
 
-[EDA](Exploratory_Analysis/exploratory_analysis.html)
+[EDA](scripts/Exploratory_Analysis/exploratory_analysis.html)
 
-[NONMEM 1CMT](../nonmem/basic/100/model_diagnostic_1cmt.html)
+[NONMEM 1CMT](model/nonmem/basic/100/model_diagnostic_1cmt.html)
 
-[NONMEM 2CMT](../nonmem/basic/102/model_diagnostic_2cmt.html)
+[NONMEM 2CMT](model/nonmem/basic/102/model_diagnostic_2cmt.html)
 
-[BAYESIAN APPROACH](Model_Diagnostic_Bayes/ceftaz-analysis-bayes_stan.html)
+[BAYESIAN APPROACH](scripts/Model_Diagnostic_Bayes/ceftaz-analysis-bayes_stan.html)
