@@ -1,7 +1,0 @@
-project:
-  type: default           
-  output-dir: docs        
-
-format:
-  html:
-    embed-resources: false

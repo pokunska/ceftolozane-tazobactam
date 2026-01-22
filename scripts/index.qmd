@@ -9,10 +9,6 @@ format:
   html:
     toc: true
     code-fold: true
-  pdf:
-    tov: true
-    lof: true
-    lot: true
 execute:
   warning: false
 ---
