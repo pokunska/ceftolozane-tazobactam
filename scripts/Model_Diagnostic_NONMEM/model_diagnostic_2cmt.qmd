@@ -146,7 +146,7 @@ theme_update(
 #Theme for statistics
 gofcol <- c('GeoMean Observed'='#073763','GeoMean IPRED'='#40904e','GeoMean PRED'='#e04f23')
 gofcol2 <- c('Median Observed'='#073763','Median IPRED'='#40904e','Median PRED'='#e04f23')
-drugs <- c("Ceftolozan" = "bisque4", "Tazabaktam" ="deepskyblue4")
+drugs <- c("Ceftolozane" = "bisque4", "Tazabactam" ="deepskyblue4")
 
 #adjust table size in output file
 FitFlextableToPage <- function(ft, pgwidth = 6){
@@ -733,8 +733,8 @@ eta_plots_cont3
 
 ```{r combined gof mod1mod2, dpi =300}
 
-path_1cmt <- "D:/PROJECTS/ceftaz/model/nonmem/basic/100/model_diagnostic_1cmt_files/figure-html"
-path_2cmt <- "D:/PROJECTS/ceftaz/model/nonmem/basic/102/model_diagnostic_2cmt_files/figure-html"
+path_1cmt <- "D:/PROJECTS/ceftolozane-tazobactam/model/nonmem/basic/100/model_diagnostic_1cmt_files/figure-html"
+path_2cmt <- "D:/PROJECTS/ceftolozane-tazobactam/model/nonmem/basic/102/model_diagnostic_2cmt_files/figure-html"
 
 img1_path <- list.files(path_1cmt, pattern = "gof semilog-3.*\\.png$", full.names = TRUE)
 img2_path <- list.files(path_2cmt, pattern = "gof semilog-3.*\\.png$", full.names = TRUE)
@@ -752,7 +752,7 @@ spacer <- image_blank(width = width, height = 120, color = "white")
 combined_img <- image_append(c(img1, spacer, img2), stack = TRUE)
 
 
-out_path <- "D:/PROJECTS/ceftaz/scripts/Model_Diagnostic/combined_diagnostics.png"
+out_path <- "D:/PROJECTS/ceftolozane-tazobactam/scripts/Model_Diagnostic_NONMEM/combined_diagnostics.png"
 image_write(combined_img, out_path)
 
 

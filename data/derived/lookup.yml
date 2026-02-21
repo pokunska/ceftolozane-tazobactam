@@ -41,7 +41,7 @@ II:
 CMT:
   short: Nonmem Compartment
   type: numeric
-  values: {Ceftolozan: 1, Ceftolozan Periph: 2, Tazabaktam: 3, Tazabaktam Periph: 4}  
+  values: {Ceftolozane: 1, Ceftolozane Periph: 2, Tazobactam: 3, Tazobactam Periph: 4}  
   
 MDV:
   short: Missing Observation

@@ -41,12 +41,12 @@ piors based on: Larson, K. B. et al. Ceftolozane-Tazobactam Population Pharmacok
 
 
 ```{r setuphtml, include=FALSE}
-#devtools::install_github("metrumresearchgroup/bbr", ref = "main")
-#devtools::install_github("metrumresearchgroup/bbr.bayes", ref = "main")
-#devtools::install_github("metrumresearchgroup/pmplots")
-#devtools::install_github("metrumresearchgroup/pmtables")
-#devtools::install_github("mjskay/tidybayes")
-#remotes::install_github("metrumresearchgroup/nmrec")
+# devtools::install_github("metrumresearchgroup/bbr", ref = "main")
+# devtools::install_github("metrumresearchgroup/bbr.bayes", ref = "main")
+# devtools::install_github("metrumresearchgroup/pmplots")
+# devtools::install_github("metrumresearchgroup/pmtables")
+# devtools::install_github("mjskay/tidybayes")
+# remotes::install_github("metrumresearchgroup/nmrec")
 ```
 
 ## Settings

@@ -145,7 +145,7 @@ theme_update(
 #Theme for statistics
 gofcol <- c('GeoMean Observed'='#073763','GeoMean IPRED'='#40904e','GeoMean PRED'='#e04f23')
 gofcol2 <- c('Median Observed'='#073763','Median IPRED'='#40904e','Median PRED'='#e04f23')
-drugs <- c("Ceftolozan" = "bisque4", "Tazabaktam" ="deepskyblue4")
+drugs <- c("Ceftolozane" = "bisque4", "Tazobactam" ="deepskyblue4")
 
 #adjust table size in output file
 FitFlextableToPage <- function(ft, pgwidth = 6){
@@ -189,7 +189,8 @@ data <- pred %>%
   inner_join(catab, by = c("NUM", "ID")) %>% 
   inner_join(cotab, by = c("NUM", "ID")) %>%
   ys_add_factors(.spec = spec) %>% 
-  filter(MDV==0)
+  filter(MDV==0) 
+  
 ```
 
 # Parameters
