@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (MiKTeX 24.4) (preloaded format=latex 2024.10.23)  15 JAN 2026 14:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (MiKTeX 24.4) (preloaded format=latex 2024.10.23)  24 FEB 2026 15:23
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -220,8 +220,7 @@ File: l3backend-dvips.def 2024-05-08 L3 backend support: dvips
 \g__pdf_backend_annotation_int=\count293
 \g__pdf_backend_link_int=\count294
 \g__pdf_backend_link_sf_int=\count295
-)
-No file continuous_cov.aux.
+) (continuous_cov.aux)
 \openout1 = `continuous_cov.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 12.
@@ -238,7 +237,7 @@ LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 12.
 LaTeX Font Info:    ... okay on input line 12.
 LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 12.
 LaTeX Font Info:    ... okay on input line 12.
-(continuous_cov.tex)
+ (continuous_cov.tex)
 
 [1
 
@@ -249,12 +248,12 @@ L3 programming layer <2024-09-10>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 2506 strings out of 473900
- 40146 string characters out of 5726053
- 435903 words of memory out of 5000000
- 25373 multiletter control sequences out of 15000+600000
+ 2509 strings out of 473900
+ 40275 string characters out of 5726053
+ 436903 words of memory out of 5000000
+ 25374 multiletter control sequences out of 15000+600000
  565515 words of font info for 50 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  57i,11n,71p,231b,402s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on continuous_cov.dvi (1 page, 1676 bytes).
+Output written on continuous_cov.dvi (1 page, 1752 bytes).

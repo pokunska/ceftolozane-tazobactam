@@ -98,7 +98,11 @@ sigfun = function(.x){sig(.x,digits=3)}
 ```
 
 ```{r csv_data, include = FALSE}
-xdata <- read_csv(file.path(data_dir, "RawData.csv"), na = c(".", " ", "-999"), guess_max = Inf)
+xdata <- read_csv(file.path(data_dir, "RawData.csv"), na = c(".", " ", "-999"), guess_max = Inf) %>% 
+   mutate(CLCR = round(ifelse(SEX == 2,
+                              ((140 - AGE) * BW) / (72 * CRE) * 0.85,  # F
+                              ((140 - AGE) * BW) / (72 * CRE)),        # M
+                              2))
 head(xdata)
 ```
 
@@ -164,7 +168,7 @@ tab %>%
 
 ```{r BLQ, eval=T, echo=F, include=T, dpi=600}
 
-spec <- ys_load(file.path(paste0(data_dir, "/", "lookup.yml")))
+spec <- ys_load(file.path(paste0(data_dir, "/", "lookup.yml"))) 
 tableList <- list()
 
 xdata_cmt <- xdata %>% 
@@ -178,12 +182,16 @@ pk_stud <- xdata_cmt %>%
   st_files(r = NULL
            #, output = "pk-data-sum.tex"
            ) %>%
-  stable(notes = c("SUBJ: subjects","OBS: observations")) %>%
-  st_aspng(stem = "parent_by_detail", dir = here(table_dir, "Obs_table"), textwidth = getOption("pmtables.text.width", 1)) 
+  stable(notes = c("SUBJ: subjects","OBS: observations")) 
 
 
 tableList$'pk-data-sum' <- pk_stud
 
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable BLQ table, out.width='100%'}
+st_as_image(pk_stud)
 ```
 
 ### Categorical covariates - summary in count (percent)
@@ -203,11 +211,14 @@ tab_cat <-
   st_files(r = NULL 
            #, output = "cat-covar-sum.tex"
            ) %>% 
-  stable() %>% 
-  st_aspng(stem = "categorical_cov", dir = here(table_dir, "Cat_table"), textwidth = getOption("pmtables.text.width", 1)
-           )
+  stable() 
 
 tableList$'cat-covar-sum' <- tab_cat
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable categorical table, out.width='100%'}
+st_as_image(tab_cat)
 ```
 
 ### Continuous covariates - summary in count (percent)
@@ -225,18 +236,22 @@ timeIndCoDF <- distinct(covID, ID, .keep_all = TRUE)
 
 tab_cont <- timeIndCoDF %>%
   pt_cont_long(
-    cols = c("HEIGHT", "BW", "AGE", "SOFA", "PCT", "ELWI", "CI", "CRE", "ALB", "PROTEIN"), 
+    cols = c("HEIGHT", "BW", "AGE", "SOFA", "PCT", "ELWI", "CI", "CRE", "Creatinine Clearance (mL/min)" = "CLCR", "ALB", "PROTEIN"), 
     table = covlab) %>% 
   st_new() %>% 
   st_files(r = NULL
            #, output = "cont-covar-sum.tex"
            ) %>% 
   st_notes_str() %>%
-  stable() %>% 
-  st_aspng(stem = "continuous_cov", dir = here(table_dir, "Con_table"))
+  stable() 
 
 tableList$'cont-covar-sum' <- tab_cont
 
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable continuous table, out.width='100%'}
+st_as_image(tab_cont)
 ```
 
 ```{r}

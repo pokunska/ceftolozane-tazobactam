@@ -955,11 +955,112 @@ vpcPlot <- vpcPlotraw +
   labs(x = "Time, h",
        y = "Plasma Drug Concentration, ug/mL") +
   theme(text = element_text(size = 12), strip.background = element_blank(),
-        axis.text = element_text(size = 12))
+        axis.text = element_text(size = 12)) 
 
 vpcPlot
 
 ```
+
+
+```{r vpc legend}
+# Calculate number of posterior samples and chains
+nPost <- mod5_res$metadata()$iter_sampling / mod5_res$metadata()$thin
+n_chains <- 4
+
+# Prepare posterior predictions
+predPop <- posterior::as_draws_df(mod5_res$draws("cPred")) %>%
+  pivot_longer(cols = starts_with("cPred"),
+               names_transform = list(name = forcats::fct_inorder)) %>%
+  mutate(ID = rep(xdata$ID, n_chains * nPost),
+         TIME = rep(xdata$TIME, n_chains * nPost),
+         CMT = rep(xdata$CMT, n_chains * nPost),
+         EVID = rep(xdata$EVID, n_chains * nPost),
+         DV = rep(xdata$DV, n_chains * nPost))
+
+# Define compartment labels
+CMT_labs <- c("1" = "CEFTOLOZANE", "3" = "TAZOBACTAM")
+
+# Filter data for observations and simulations
+obs_filtered <- xdata %>% filter(!is.na(DV) & EVID == 0)
+sim_filtered <- predPop %>% filter(!is.na(DV) & EVID == 0)
+
+# Create custom VPC theme
+custom_vpc_theme <- new_vpc_theme(update = list(
+  sim_pi_fill = "#1A2B1A",
+  sim_pi_alpha = 0.25,
+  obs_ci_size = 1,
+  obs_ci_color = "#1A2B1A",
+  obs_median_color = "#1A2B1A",
+  obs_ci_linetype = "dashed",
+  sim_median_fill = "#1A2B1A",
+  sim_median_alpha = 0.5
+))
+
+# Generate raw VPC plot
+vpcPlotraw <- vpc(
+  sim = sim_filtered,
+  obs = obs_filtered,
+  obs_cols = list(id = "ID", dv = "DV", idv = "TIME"),
+  sim_cols = list(id = "ID", dv = "value", idv = "TIME"),
+  ci = c(0.1, 0.9), pi = c(0.1, 0.9),
+  stratify = "CMT",
+  labeller = labeller(CMT = CMT_labs),
+  show = list(
+    obs_dv = FALSE, obs_ci = TRUE,
+    pi = FALSE, pi_as_area = FALSE, pi_ci = TRUE,
+    obs_median = TRUE, sim_median = FALSE, sim_median_ci = TRUE
+  ),
+  vpc_theme = custom_vpc_theme
+) + theme_bw()
+
+# Enhance plot with points, scales, labels, theme, and legend
+vpcPlot <- vpcPlotraw +
+  geom_point(data = obs_filtered, aes(x = TIME, y = DV), alpha = 0.1) +
+  scale_y_log10() +
+  labs(x = "Time, h", y = "Plasma Drug Concentration, ug/mL") +
+  theme(
+    text                = element_text(size = 12),
+    axis.text           = element_text(size = 12),
+    strip.background    = element_blank(),
+    legend.position     = "bottom",
+    legend.direction    = "vertical",
+    legend.title        = element_text(size = 10),
+    legend.text         = element_text(size = 9),          # ← mniejsza czcionka w legendzie
+    legend.key.height   = unit(0.9, "lines"),              # opcjonalnie – nieco ciaśniejsze odstępy
+    legend.margin       = margin(2, 0, 0, 0)
+  ) +
+  # Dummy geoms for legend – pełne nazwy
+  geom_point(aes(x = Inf, y = Inf, color = "Observed Concentrations"), alpha = 0.1) +
+  geom_line(aes(x = Inf, y = Inf, color = "Observed Median")) +
+  geom_line(aes(x = Inf, y = Inf, color = "Observed 80% CI"), linetype = "dashed") +
+  geom_ribbon(aes(x = Inf, ymin = Inf, ymax = Inf, fill = "Simulated Median 80% CI"), alpha = 0.5) +
+  geom_ribbon(aes(x = Inf, ymin = Inf, ymax = Inf, fill = "Simulation 80% PI"), alpha = 0.25) +
+  scale_color_manual(
+    name = "DOTS & LINES",
+    values = c(
+      "Observed Concentrations"             = "black",
+      "Observed Median"                     = "#1A2B1A",
+      "Observed 80% CI"                     = "#1A2B1A"
+    ),
+  breaks = c("Observed Concentrations", "Observed Median", "Observed 80% CI")
+  ) +
+  scale_fill_manual(
+    name = "AREAS",
+    values = c(
+      "Simulated Median 80% CI"     = "#1A2B1A",
+      "Simulation 80% PI"           = "#1A2B1A"
+    )
+  ) +
+  guides(
+    color = guide_legend(ncol = 1, title.position = "top"),
+    fill  = guide_legend(ncol = 1, title.position = "top")
+  )
+
+# Display the plot
+vpcPlot
+```
+
+
 
 
 ```{r ppc_dens_overlay}
@@ -1665,7 +1766,16 @@ heavt_comp <- function(x) {
 boot <- param_estimates_batch(BS_DIR)
 err <- filter(boot, !is.na(error_msg))
 nrow(err)
+
+head(boot)
          
+# n_total   <- nrow(boot)
+# n_failed  <- sum(!is.na(boot$error_msg))
+# n_success <- n_total - n_failed
+# 
+# percent_success <- n_success / n_total * 100
+# round(percent_success, 1)
+
 ```
 ### Generate parameter sets
 
@@ -2274,6 +2384,15 @@ boot <- param_estimates_batch(BS_DIR)
 err <- filter(boot, !is.na(error_msg))
 nrow(err)
          
+head(boot)
+         
+# n_total   <- nrow(boot)
+# n_failed  <- sum(!is.na(boot$error_msg))
+# n_success <- n_total - n_failed
+# 
+# percent_success <- n_success / n_total * 100
+# round(percent_success, 1)
+
 ```
 
 ### Generate parameter sets

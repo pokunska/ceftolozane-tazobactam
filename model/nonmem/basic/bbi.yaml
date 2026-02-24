@@ -2,7 +2,7 @@ clean_lvl: 1
 git: yes
 local:
   create_child_dirs: yes
-mpi_exec_path: C:/nm74g64/run/psexec
+mpi_exec_path: /usr/local/mpich3/bin/mpiexec
 nmfe_options:
   maxlim: 2
 nonmem:
@@ -14,8 +14,7 @@ nonmem:
     home: C:\nm75g64
     default: yes
 output_dir: '{{ .Name }}'
-parallel: no
+parallel: yes
 parallel_timeout: 2147483647
 save_config: yes
-threads: 1.0
-parafile: C:/nm74g64/run/fpiwini8.pnm
+threads: 4.0
