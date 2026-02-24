@@ -418,6 +418,24 @@ ggplot2::ggsave(plot2, filename = here::here(figure_dir, "rawdata2.png"), width 
 
 ```
 
+# The sampling schedule
+```{r n obs}
+cef_obs <- xdata %>% 
+  filter(EVID == 0, CMT == 1) %>% 
+  mutate(TIME_8H = TIME %% 8) %>%  
+  group_by(TIME_8H) %>% 
+  count() 
+
+taz_obs <- xdata %>% 
+  filter(EVID == 0, CMT == 3) %>% 
+  mutate(TIME_8H = TIME %% 8) %>%  
+  group_by(TIME_8H) %>% 
+  count() 
+
+left_join(cef_obs, taz_obs, by = "TIME_8H", suffix = c("_cef", "taz"))
+```
+
+
 ```{r sessioinfo}
 sessionInfo()
 ```

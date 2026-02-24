@@ -116,6 +116,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#population-pk-profiles" id="toc-population-pk-profiles" class="nav-link" data-scroll-target="#population-pk-profiles"><span class="header-section-number">3.3.2</span> Population PK Profiles</a></li>
   </ul></li>
   </ul></li>
+  <li><a href="#the-sampling-schedule" id="toc-the-sampling-schedule" class="nav-link" data-scroll-target="#the-sampling-schedule"><span class="header-section-number">4</span> The sampling schedule</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="exploratory_analysis.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
 </div>
@@ -905,10 +906,50 @@ Use `renv::init()` to initialize the project.</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>ggplot2<span class="sc">::</span><span class="fu">ggsave</span>(plot2, <span class="at">filename =</span> here<span class="sc">::</span><span class="fu">here</span>(figure_dir, <span class="st">"rawdata2.png"</span>), <span class="at">width =</span> <span class="dv">12</span>, <span class="at">height =</span> <span class="dv">10</span>, <span class="at">dpi =</span> <span class="dv">600</span>, <span class="at">units =</span> <span class="st">"cm"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
+</section>
+</section>
+</section>
+<section id="the-sampling-schedule" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The sampling schedule</h1>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>cef_obs <span class="ot">&lt;-</span> xdata <span class="sc">%&gt;%</span> </span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(EVID <span class="sc">==</span> <span class="dv">0</span>, CMT <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">TIME_8H =</span> TIME <span class="sc">%%</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span>  </span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(TIME_8H) <span class="sc">%&gt;%</span> </span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>() </span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>taz_obs <span class="ot">&lt;-</span> xdata <span class="sc">%&gt;%</span> </span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(EVID <span class="sc">==</span> <span class="dv">0</span>, CMT <span class="sc">==</span> <span class="dv">3</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">TIME_8H =</span> TIME <span class="sc">%%</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span>  </span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(TIME_8H) <span class="sc">%&gt;%</span> </span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>() </span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a><span class="fu">left_join</span>(cef_obs, taz_obs, <span class="at">by =</span> <span class="st">"TIME_8H"</span>, <span class="at">suffix =</span> <span class="fu">c</span>(<span class="st">"_cef"</span>, <span class="st">"taz"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 11 × 3
+# Groups:   TIME_8H [11]
+   TIME_8H n_cef  ntaz
+     &lt;dbl&gt; &lt;int&gt; &lt;int&gt;
+ 1     0      24    14
+ 2     0.5     3     3
+ 3     1       4     3
+ 4     2.5     1     1
+ 5     3      33    33
+ 6     4       3     3
+ 7     4.5     3     3
+ 8     5       2     2
+ 9     5.5    24    24
+10     6       3     3
+11     6.5     1     1</code></pre>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.3.2 (2023-10-31 ucrt)
@@ -976,8 +1017,6 @@ loaded via a namespace (and not attached):
 [82] lifecycle_1.0.4      bit64_4.5.2         </code></pre>
 </div>
 </div>
-</section>
-</section>
 </section>
 
 </main>
