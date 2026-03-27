@@ -671,10 +671,10 @@ pars = c("CLCHat", "QCHat", "V1CHat", "V2CHat", "CLTHat", "QTHat", "V1THat", "V2
 p1=bayesplot::mcmc_intervals(mod_to_plot1$draws(pars))
 p2=bayesplot::mcmc_intervals(mod_to_plot2$draws(pars))
 
-p1_data = p1$plot$data %>% mutate(type = "prior")
-p2_data = p2$plot$data %>% mutate(type = "posterior")
+p1_data = p1@data %>% mutate(type = "prior")
+p2_data = p2@data %>% mutate(type = "posterior")
 
-plot1 <- rbind(p1_data,p2_data)%>%
+ plot1 <- rbind(p1_data,p2_data)%>%
   ggplot(aes(y=type, x=m))+
   geom_point(size=2, color = "#4A2C2A")+
   geom_linerange(aes(xmin = l, xmax = h), size=1,color = "#4A2C2A")+
@@ -963,11 +963,10 @@ vpcPlot
 
 
 ```{r vpc legend}
-# Calculate number of posterior samples and chains
+
 nPost <- mod5_res$metadata()$iter_sampling / mod5_res$metadata()$thin
 n_chains <- 4
 
-# Prepare posterior predictions
 predPop <- posterior::as_draws_df(mod5_res$draws("cPred")) %>%
   pivot_longer(cols = starts_with("cPred"),
                names_transform = list(name = forcats::fct_inorder)) %>%
@@ -977,14 +976,11 @@ predPop <- posterior::as_draws_df(mod5_res$draws("cPred")) %>%
          EVID = rep(xdata$EVID, n_chains * nPost),
          DV = rep(xdata$DV, n_chains * nPost))
 
-# Define compartment labels
 CMT_labs <- c("1" = "CEFTOLOZANE", "3" = "TAZOBACTAM")
 
-# Filter data for observations and simulations
 obs_filtered <- xdata %>% filter(!is.na(DV) & EVID == 0)
 sim_filtered <- predPop %>% filter(!is.na(DV) & EVID == 0)
 
-# Create custom VPC theme
 custom_vpc_theme <- new_vpc_theme(update = list(
   sim_pi_fill = "#1A2B1A",
   sim_pi_alpha = 0.25,
@@ -996,7 +992,6 @@ custom_vpc_theme <- new_vpc_theme(update = list(
   sim_median_alpha = 0.5
 ))
 
-# Generate raw VPC plot
 vpcPlotraw <- vpc(
   sim = sim_filtered,
   obs = obs_filtered,
@@ -1013,7 +1008,6 @@ vpcPlotraw <- vpc(
   vpc_theme = custom_vpc_theme
 ) + theme_bw()
 
-# Enhance plot with points, scales, labels, theme, and legend
 vpcPlot <- vpcPlotraw +
   geom_point(data = obs_filtered, aes(x = TIME, y = DV), alpha = 0.1) +
   scale_y_log10() +
@@ -1025,11 +1019,10 @@ vpcPlot <- vpcPlotraw +
     legend.position     = "bottom",
     legend.direction    = "vertical",
     legend.title        = element_text(size = 10),
-    legend.text         = element_text(size = 9),          # ← mniejsza czcionka w legendzie
-    legend.key.height   = unit(0.9, "lines"),              # opcjonalnie – nieco ciaśniejsze odstępy
+    legend.text         = element_text(size = 9),          
+    legend.key.height   = unit(0.9, "lines"),           
     legend.margin       = margin(2, 0, 0, 0)
   ) +
-  # Dummy geoms for legend – pełne nazwy
   geom_point(aes(x = Inf, y = Inf, color = "Observed Concentrations"), alpha = 0.1) +
   geom_line(aes(x = Inf, y = Inf, color = "Observed Median")) +
   geom_line(aes(x = Inf, y = Inf, color = "Observed 80% CI"), linetype = "dashed") +
@@ -1056,7 +1049,6 @@ vpcPlot <- vpcPlotraw +
     fill  = guide_legend(ncol = 1, title.position = "top")
   )
 
-# Display the plot
 vpcPlot
 ```
 

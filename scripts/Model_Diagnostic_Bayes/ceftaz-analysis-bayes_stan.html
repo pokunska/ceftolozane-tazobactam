@@ -8,7 +8,7 @@
 
 <meta name="author" content="Paulina Okuńska (okunskapaul@gmail.com)">
 <meta name="author" content="Pawel Wiczling">
-<meta name="dcterms.date" content="2026-02-24">
+<meta name="dcterms.date" content="2026-03-27">
 
 <title>Pharmacokinetics of ceftolozane with tazobactam in critically ill patients - Bayesian approach</title>
 <style>
@@ -166,7 +166,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">February 24, 2026</p>
+      <p class="date">March 27, 2026</p>
     </div>
   </div>
   
@@ -190,16 +190,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">status</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>A large number of files (21419 in total) have been discovered.
-It may take renv a long time to crawl these files for dependencies.
+<pre><code>A large number of files (21418 in total) have been discovered.
+It may take renv a long time to scan these files for dependencies.
 Consider using .renvignore to ignore irrelevant files.
-See `?renv::dependencies` for more information.
+See `]8;;x-r-help:renv::dependencies?renv::dependencies]8;;` for more information.
 Set `options(renv.config.dependencies.limit = Inf)` to disable this warning.
 
 
-NOTE: Dependency discovery took 94 seconds during snapshot.
+NOTE: Dependency discovery took 99 seconds during snapshot.
 Consider using .renvignore to ignore files, or switching to explicit snapshots.
-See `?renv::dependencies` for more information.
+See `]8;;x-r-help:renv::dependencies?renv::dependencies]8;;` for more information.
 
 - D:/PROJECTS/ceftolozane-tazobactam/model/nonmem/bootstrap/bs   : 1502 files
 - D:/PROJECTS/ceftolozane-tazobactam/model/nonmem/bootstrap/bs102: 1502 files
@@ -212,7 +212,7 @@ Error: directory contains 1504 files; consider ignoring this directory
 # ceftolozane-tazobactam/model/nonmem/bootstrap/bs102 ------------------------
 Error: directory contains 1504 files; consider ignoring this directory
 
-Please see `?renv::dependencies` for more information.
+Please see `]8;;x-r-help:renv::dependencies?renv::dependencies]8;;` for more information.
 
 No issues found -- the project is in a consistent state.</code></pre>
 </div>
@@ -386,7 +386,7 @@ No issues found -- the project is in a consistent state.</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>mod5  <span class="ot">&lt;-</span> <span class="fu">read_model</span>(<span class="fu">file.path</span>(model_dir, params<span class="sc">$</span>run))</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>mod5</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<p>── Status ─────────────────────────────────</p>
+<p>── STAN Model Status ────────────────────────────</p>
 <p>• Finished Running</p>
 <p>── Absolute Model Path ───────────────────────────</p>
 <p>• D:/PROJECTS/ceftolozane-tazobactam/model/BAYES/5</p>
@@ -1216,10 +1216,10 @@ No issues found -- the project is in a consistent state.</code></pre>
 <span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>p1<span class="ot">=</span>bayesplot<span class="sc">::</span><span class="fu">mcmc_intervals</span>(mod_to_plot1<span class="sc">$</span><span class="fu">draws</span>(pars))</span>
 <span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>p2<span class="ot">=</span>bayesplot<span class="sc">::</span><span class="fu">mcmc_intervals</span>(mod_to_plot2<span class="sc">$</span><span class="fu">draws</span>(pars))</span>
 <span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>p1_data <span class="ot">=</span> p1<span class="sc">$</span>plot<span class="sc">$</span>data <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">type =</span> <span class="st">"prior"</span>)</span>
-<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>p2_data <span class="ot">=</span> p2<span class="sc">$</span>plot<span class="sc">$</span>data <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">type =</span> <span class="st">"posterior"</span>)</span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>p1_data <span class="ot">=</span> p1<span class="sc">@</span>data <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">type =</span> <span class="st">"prior"</span>)</span>
+<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>p2_data <span class="ot">=</span> p2<span class="sc">@</span>data <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">type =</span> <span class="st">"posterior"</span>)</span>
 <span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>plot1 <span class="ot">&lt;-</span> <span class="fu">rbind</span>(p1_data,p2_data)<span class="sc">%&gt;%</span></span>
+<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a> plot1 <span class="ot">&lt;-</span> <span class="fu">rbind</span>(p1_data,p2_data)<span class="sc">%&gt;%</span></span>
 <span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y=</span>type, <span class="at">x=</span>m))<span class="sc">+</span></span>
 <span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size=</span><span class="dv">2</span>, <span class="at">color =</span> <span class="st">"#4A2C2A"</span>)<span class="sc">+</span></span>
 <span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_linerange</span>(<span class="fu">aes</span>(<span class="at">xmin =</span> l, <span class="at">xmax =</span> h), <span class="at">size=</span><span class="dv">1</span>,<span class="at">color =</span> <span class="st">"#4A2C2A"</span>)<span class="sc">+</span></span>
@@ -1600,101 +1600,92 @@ No issues found -- the project is in a consistent state.</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate number of posterior samples and chains</span></span>
-<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>nPost <span class="ot">&lt;-</span> mod5_res<span class="sc">$</span><span class="fu">metadata</span>()<span class="sc">$</span>iter_sampling <span class="sc">/</span> mod5_res<span class="sc">$</span><span class="fu">metadata</span>()<span class="sc">$</span>thin</span>
-<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>n_chains <span class="ot">&lt;-</span> <span class="dv">4</span></span>
-<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Prepare posterior predictions</span></span>
-<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>predPop <span class="ot">&lt;-</span> posterior<span class="sc">::</span><span class="fu">as_draws_df</span>(mod5_res<span class="sc">$</span><span class="fu">draws</span>(<span class="st">"cPred"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">starts_with</span>(<span class="st">"cPred"</span>),</span>
-<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_transform =</span> <span class="fu">list</span>(<span class="at">name =</span> forcats<span class="sc">::</span>fct_inorder)) <span class="sc">%&gt;%</span></span>
-<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ID =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>ID, n_chains <span class="sc">*</span> nPost),</span>
-<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">TIME =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>TIME, n_chains <span class="sc">*</span> nPost),</span>
-<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">CMT =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>CMT, n_chains <span class="sc">*</span> nPost),</span>
-<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>         <span class="at">EVID =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>EVID, n_chains <span class="sc">*</span> nPost),</span>
-<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>         <span class="at">DV =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>DV, n_chains <span class="sc">*</span> nPost))</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>nPost <span class="ot">&lt;-</span> mod5_res<span class="sc">$</span><span class="fu">metadata</span>()<span class="sc">$</span>iter_sampling <span class="sc">/</span> mod5_res<span class="sc">$</span><span class="fu">metadata</span>()<span class="sc">$</span>thin</span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>n_chains <span class="ot">&lt;-</span> <span class="dv">4</span></span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>predPop <span class="ot">&lt;-</span> posterior<span class="sc">::</span><span class="fu">as_draws_df</span>(mod5_res<span class="sc">$</span><span class="fu">draws</span>(<span class="st">"cPred"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">starts_with</span>(<span class="st">"cPred"</span>),</span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_transform =</span> <span class="fu">list</span>(<span class="at">name =</span> forcats<span class="sc">::</span>fct_inorder)) <span class="sc">%&gt;%</span></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ID =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>ID, n_chains <span class="sc">*</span> nPost),</span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">TIME =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>TIME, n_chains <span class="sc">*</span> nPost),</span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">CMT =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>CMT, n_chains <span class="sc">*</span> nPost),</span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">EVID =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>EVID, n_chains <span class="sc">*</span> nPost),</span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">DV =</span> <span class="fu">rep</span>(xdata<span class="sc">$</span>DV, n_chains <span class="sc">*</span> nPost))</span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>CMT_labs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"1"</span> <span class="ot">=</span> <span class="st">"CEFTOLOZANE"</span>, <span class="st">"3"</span> <span class="ot">=</span> <span class="st">"TAZOBACTAM"</span>)</span>
 <span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Define compartment labels</span></span>
-<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a>CMT_labs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"1"</span> <span class="ot">=</span> <span class="st">"CEFTOLOZANE"</span>, <span class="st">"3"</span> <span class="ot">=</span> <span class="st">"TAZOBACTAM"</span>)</span>
+<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a>obs_filtered <span class="ot">&lt;-</span> xdata <span class="sc">%&gt;%</span> <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(DV) <span class="sc">&amp;</span> EVID <span class="sc">==</span> <span class="dv">0</span>)</span>
+<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a>sim_filtered <span class="ot">&lt;-</span> predPop <span class="sc">%&gt;%</span> <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(DV) <span class="sc">&amp;</span> EVID <span class="sc">==</span> <span class="dv">0</span>)</span>
 <span id="cb69-17"><a href="#cb69-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter data for observations and simulations</span></span>
-<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>obs_filtered <span class="ot">&lt;-</span> xdata <span class="sc">%&gt;%</span> <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(DV) <span class="sc">&amp;</span> EVID <span class="sc">==</span> <span class="dv">0</span>)</span>
-<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a>sim_filtered <span class="ot">&lt;-</span> predPop <span class="sc">%&gt;%</span> <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(DV) <span class="sc">&amp;</span> EVID <span class="sc">==</span> <span class="dv">0</span>)</span>
-<span id="cb69-21"><a href="#cb69-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-22"><a href="#cb69-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Create custom VPC theme</span></span>
-<span id="cb69-23"><a href="#cb69-23" aria-hidden="true" tabindex="-1"></a>custom_vpc_theme <span class="ot">&lt;-</span> <span class="fu">new_vpc_theme</span>(<span class="at">update =</span> <span class="fu">list</span>(</span>
-<span id="cb69-24"><a href="#cb69-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_pi_fill =</span> <span class="st">"#1A2B1A"</span>,</span>
-<span id="cb69-25"><a href="#cb69-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_pi_alpha =</span> <span class="fl">0.25</span>,</span>
-<span id="cb69-26"><a href="#cb69-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_ci_size =</span> <span class="dv">1</span>,</span>
-<span id="cb69-27"><a href="#cb69-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_ci_color =</span> <span class="st">"#1A2B1A"</span>,</span>
-<span id="cb69-28"><a href="#cb69-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_median_color =</span> <span class="st">"#1A2B1A"</span>,</span>
-<span id="cb69-29"><a href="#cb69-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_ci_linetype =</span> <span class="st">"dashed"</span>,</span>
-<span id="cb69-30"><a href="#cb69-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_median_fill =</span> <span class="st">"#1A2B1A"</span>,</span>
-<span id="cb69-31"><a href="#cb69-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_median_alpha =</span> <span class="fl">0.5</span></span>
-<span id="cb69-32"><a href="#cb69-32" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb69-33"><a href="#cb69-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-34"><a href="#cb69-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate raw VPC plot</span></span>
-<span id="cb69-35"><a href="#cb69-35" aria-hidden="true" tabindex="-1"></a>vpcPlotraw <span class="ot">&lt;-</span> <span class="fu">vpc</span>(</span>
-<span id="cb69-36"><a href="#cb69-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim =</span> sim_filtered,</span>
-<span id="cb69-37"><a href="#cb69-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs =</span> obs_filtered,</span>
-<span id="cb69-38"><a href="#cb69-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_cols =</span> <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"ID"</span>, <span class="at">dv =</span> <span class="st">"DV"</span>, <span class="at">idv =</span> <span class="st">"TIME"</span>),</span>
-<span id="cb69-39"><a href="#cb69-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_cols =</span> <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"ID"</span>, <span class="at">dv =</span> <span class="st">"value"</span>, <span class="at">idv =</span> <span class="st">"TIME"</span>),</span>
-<span id="cb69-40"><a href="#cb69-40" aria-hidden="true" tabindex="-1"></a>  <span class="at">ci =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>), <span class="at">pi =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>),</span>
-<span id="cb69-41"><a href="#cb69-41" aria-hidden="true" tabindex="-1"></a>  <span class="at">stratify =</span> <span class="st">"CMT"</span>,</span>
-<span id="cb69-42"><a href="#cb69-42" aria-hidden="true" tabindex="-1"></a>  <span class="at">labeller =</span> <span class="fu">labeller</span>(<span class="at">CMT =</span> CMT_labs),</span>
-<span id="cb69-43"><a href="#cb69-43" aria-hidden="true" tabindex="-1"></a>  <span class="at">show =</span> <span class="fu">list</span>(</span>
-<span id="cb69-44"><a href="#cb69-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">obs_dv =</span> <span class="cn">FALSE</span>, <span class="at">obs_ci =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb69-45"><a href="#cb69-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">pi =</span> <span class="cn">FALSE</span>, <span class="at">pi_as_area =</span> <span class="cn">FALSE</span>, <span class="at">pi_ci =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb69-46"><a href="#cb69-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">obs_median =</span> <span class="cn">TRUE</span>, <span class="at">sim_median =</span> <span class="cn">FALSE</span>, <span class="at">sim_median_ci =</span> <span class="cn">TRUE</span></span>
-<span id="cb69-47"><a href="#cb69-47" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb69-48"><a href="#cb69-48" aria-hidden="true" tabindex="-1"></a>  <span class="at">vpc_theme =</span> custom_vpc_theme</span>
-<span id="cb69-49"><a href="#cb69-49" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
-<span id="cb69-50"><a href="#cb69-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-51"><a href="#cb69-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Enhance plot with points, scales, labels, theme, and legend</span></span>
-<span id="cb69-52"><a href="#cb69-52" aria-hidden="true" tabindex="-1"></a>vpcPlot <span class="ot">&lt;-</span> vpcPlotraw <span class="sc">+</span></span>
-<span id="cb69-53"><a href="#cb69-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> obs_filtered, <span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> DV), <span class="at">alpha =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
-<span id="cb69-54"><a href="#cb69-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>() <span class="sc">+</span></span>
-<span id="cb69-55"><a href="#cb69-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Time, h"</span>, <span class="at">y =</span> <span class="st">"Plasma Drug Concentration, ug/mL"</span>) <span class="sc">+</span></span>
-<span id="cb69-56"><a href="#cb69-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb69-57"><a href="#cb69-57" aria-hidden="true" tabindex="-1"></a>    <span class="at">text                =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>),</span>
-<span id="cb69-58"><a href="#cb69-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text           =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>),</span>
-<span id="cb69-59"><a href="#cb69-59" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.background    =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb69-60"><a href="#cb69-60" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position     =</span> <span class="st">"bottom"</span>,</span>
-<span id="cb69-61"><a href="#cb69-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.direction    =</span> <span class="st">"vertical"</span>,</span>
-<span id="cb69-62"><a href="#cb69-62" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.title        =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>),</span>
-<span id="cb69-63"><a href="#cb69-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.text         =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">9</span>),          <span class="co"># ← mniejsza czcionka w legendzie</span></span>
-<span id="cb69-64"><a href="#cb69-64" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.key.height   =</span> <span class="fu">unit</span>(<span class="fl">0.9</span>, <span class="st">"lines"</span>),              <span class="co"># opcjonalnie – nieco ciaśniejsze odstępy</span></span>
-<span id="cb69-65"><a href="#cb69-65" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.margin       =</span> <span class="fu">margin</span>(<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)</span>
-<span id="cb69-66"><a href="#cb69-66" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb69-67"><a href="#cb69-67" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Dummy geoms for legend – pełne nazwy</span></span>
-<span id="cb69-68"><a href="#cb69-68" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">color =</span> <span class="st">"Observed Concentrations"</span>), <span class="at">alpha =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
-<span id="cb69-69"><a href="#cb69-69" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">color =</span> <span class="st">"Observed Median"</span>)) <span class="sc">+</span></span>
-<span id="cb69-70"><a href="#cb69-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">color =</span> <span class="st">"Observed 80% CI"</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
-<span id="cb69-71"><a href="#cb69-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">ymin =</span> <span class="cn">Inf</span>, <span class="at">ymax =</span> <span class="cn">Inf</span>, <span class="at">fill =</span> <span class="st">"Simulated Median 80% CI"</span>), <span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb69-72"><a href="#cb69-72" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">ymin =</span> <span class="cn">Inf</span>, <span class="at">ymax =</span> <span class="cn">Inf</span>, <span class="at">fill =</span> <span class="st">"Simulation 80% PI"</span>), <span class="at">alpha =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
-<span id="cb69-73"><a href="#cb69-73" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(</span>
-<span id="cb69-74"><a href="#cb69-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">"DOTS &amp; LINES"</span>,</span>
-<span id="cb69-75"><a href="#cb69-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> <span class="fu">c</span>(</span>
-<span id="cb69-76"><a href="#cb69-76" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Observed Concentrations"</span>             <span class="ot">=</span> <span class="st">"black"</span>,</span>
-<span id="cb69-77"><a href="#cb69-77" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Observed Median"</span>                     <span class="ot">=</span> <span class="st">"#1A2B1A"</span>,</span>
-<span id="cb69-78"><a href="#cb69-78" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Observed 80% CI"</span>                     <span class="ot">=</span> <span class="st">"#1A2B1A"</span></span>
-<span id="cb69-79"><a href="#cb69-79" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb69-80"><a href="#cb69-80" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="st">"Observed Concentrations"</span>, <span class="st">"Observed Median"</span>, <span class="st">"Observed 80% CI"</span>)</span>
-<span id="cb69-81"><a href="#cb69-81" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb69-82"><a href="#cb69-82" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(</span>
-<span id="cb69-83"><a href="#cb69-83" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">"AREAS"</span>,</span>
-<span id="cb69-84"><a href="#cb69-84" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> <span class="fu">c</span>(</span>
-<span id="cb69-85"><a href="#cb69-85" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Simulated Median 80% CI"</span>     <span class="ot">=</span> <span class="st">"#1A2B1A"</span>,</span>
-<span id="cb69-86"><a href="#cb69-86" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Simulation 80% PI"</span>           <span class="ot">=</span> <span class="st">"#1A2B1A"</span></span>
-<span id="cb69-87"><a href="#cb69-87" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb69-88"><a href="#cb69-88" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb69-89"><a href="#cb69-89" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(</span>
-<span id="cb69-90"><a href="#cb69-90" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">title.position =</span> <span class="st">"top"</span>),</span>
-<span id="cb69-91"><a href="#cb69-91" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill  =</span> <span class="fu">guide_legend</span>(<span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">title.position =</span> <span class="st">"top"</span>)</span>
-<span id="cb69-92"><a href="#cb69-92" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb69-93"><a href="#cb69-93" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb69-94"><a href="#cb69-94" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the plot</span></span>
-<span id="cb69-95"><a href="#cb69-95" aria-hidden="true" tabindex="-1"></a>vpcPlot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a>custom_vpc_theme <span class="ot">&lt;-</span> <span class="fu">new_vpc_theme</span>(<span class="at">update =</span> <span class="fu">list</span>(</span>
+<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_pi_fill =</span> <span class="st">"#1A2B1A"</span>,</span>
+<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_pi_alpha =</span> <span class="fl">0.25</span>,</span>
+<span id="cb69-21"><a href="#cb69-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_ci_size =</span> <span class="dv">1</span>,</span>
+<span id="cb69-22"><a href="#cb69-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_ci_color =</span> <span class="st">"#1A2B1A"</span>,</span>
+<span id="cb69-23"><a href="#cb69-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_median_color =</span> <span class="st">"#1A2B1A"</span>,</span>
+<span id="cb69-24"><a href="#cb69-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_ci_linetype =</span> <span class="st">"dashed"</span>,</span>
+<span id="cb69-25"><a href="#cb69-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_median_fill =</span> <span class="st">"#1A2B1A"</span>,</span>
+<span id="cb69-26"><a href="#cb69-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_median_alpha =</span> <span class="fl">0.5</span></span>
+<span id="cb69-27"><a href="#cb69-27" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb69-28"><a href="#cb69-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-29"><a href="#cb69-29" aria-hidden="true" tabindex="-1"></a>vpcPlotraw <span class="ot">&lt;-</span> <span class="fu">vpc</span>(</span>
+<span id="cb69-30"><a href="#cb69-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim =</span> sim_filtered,</span>
+<span id="cb69-31"><a href="#cb69-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs =</span> obs_filtered,</span>
+<span id="cb69-32"><a href="#cb69-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">obs_cols =</span> <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"ID"</span>, <span class="at">dv =</span> <span class="st">"DV"</span>, <span class="at">idv =</span> <span class="st">"TIME"</span>),</span>
+<span id="cb69-33"><a href="#cb69-33" aria-hidden="true" tabindex="-1"></a>  <span class="at">sim_cols =</span> <span class="fu">list</span>(<span class="at">id =</span> <span class="st">"ID"</span>, <span class="at">dv =</span> <span class="st">"value"</span>, <span class="at">idv =</span> <span class="st">"TIME"</span>),</span>
+<span id="cb69-34"><a href="#cb69-34" aria-hidden="true" tabindex="-1"></a>  <span class="at">ci =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>), <span class="at">pi =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>),</span>
+<span id="cb69-35"><a href="#cb69-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">stratify =</span> <span class="st">"CMT"</span>,</span>
+<span id="cb69-36"><a href="#cb69-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">labeller =</span> <span class="fu">labeller</span>(<span class="at">CMT =</span> CMT_labs),</span>
+<span id="cb69-37"><a href="#cb69-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">show =</span> <span class="fu">list</span>(</span>
+<span id="cb69-38"><a href="#cb69-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">obs_dv =</span> <span class="cn">FALSE</span>, <span class="at">obs_ci =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb69-39"><a href="#cb69-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">pi =</span> <span class="cn">FALSE</span>, <span class="at">pi_as_area =</span> <span class="cn">FALSE</span>, <span class="at">pi_ci =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb69-40"><a href="#cb69-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">obs_median =</span> <span class="cn">TRUE</span>, <span class="at">sim_median =</span> <span class="cn">FALSE</span>, <span class="at">sim_median_ci =</span> <span class="cn">TRUE</span></span>
+<span id="cb69-41"><a href="#cb69-41" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb69-42"><a href="#cb69-42" aria-hidden="true" tabindex="-1"></a>  <span class="at">vpc_theme =</span> custom_vpc_theme</span>
+<span id="cb69-43"><a href="#cb69-43" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
+<span id="cb69-44"><a href="#cb69-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-45"><a href="#cb69-45" aria-hidden="true" tabindex="-1"></a>vpcPlot <span class="ot">&lt;-</span> vpcPlotraw <span class="sc">+</span></span>
+<span id="cb69-46"><a href="#cb69-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> obs_filtered, <span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> DV), <span class="at">alpha =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb69-47"><a href="#cb69-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>() <span class="sc">+</span></span>
+<span id="cb69-48"><a href="#cb69-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Time, h"</span>, <span class="at">y =</span> <span class="st">"Plasma Drug Concentration, ug/mL"</span>) <span class="sc">+</span></span>
+<span id="cb69-49"><a href="#cb69-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb69-50"><a href="#cb69-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">text                =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>),</span>
+<span id="cb69-51"><a href="#cb69-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text           =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>),</span>
+<span id="cb69-52"><a href="#cb69-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.background    =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb69-53"><a href="#cb69-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position     =</span> <span class="st">"bottom"</span>,</span>
+<span id="cb69-54"><a href="#cb69-54" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.direction    =</span> <span class="st">"vertical"</span>,</span>
+<span id="cb69-55"><a href="#cb69-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.title        =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>),</span>
+<span id="cb69-56"><a href="#cb69-56" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.text         =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">9</span>),          </span>
+<span id="cb69-57"><a href="#cb69-57" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.key.height   =</span> <span class="fu">unit</span>(<span class="fl">0.9</span>, <span class="st">"lines"</span>),           </span>
+<span id="cb69-58"><a href="#cb69-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.margin       =</span> <span class="fu">margin</span>(<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb69-59"><a href="#cb69-59" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb69-60"><a href="#cb69-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">color =</span> <span class="st">"Observed Concentrations"</span>), <span class="at">alpha =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb69-61"><a href="#cb69-61" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">color =</span> <span class="st">"Observed Median"</span>)) <span class="sc">+</span></span>
+<span id="cb69-62"><a href="#cb69-62" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">color =</span> <span class="st">"Observed 80% CI"</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb69-63"><a href="#cb69-63" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">ymin =</span> <span class="cn">Inf</span>, <span class="at">ymax =</span> <span class="cn">Inf</span>, <span class="at">fill =</span> <span class="st">"Simulated Median 80% CI"</span>), <span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb69-64"><a href="#cb69-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_ribbon</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">ymin =</span> <span class="cn">Inf</span>, <span class="at">ymax =</span> <span class="cn">Inf</span>, <span class="at">fill =</span> <span class="st">"Simulation 80% PI"</span>), <span class="at">alpha =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb69-65"><a href="#cb69-65" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(</span>
+<span id="cb69-66"><a href="#cb69-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">"DOTS &amp; LINES"</span>,</span>
+<span id="cb69-67"><a href="#cb69-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> <span class="fu">c</span>(</span>
+<span id="cb69-68"><a href="#cb69-68" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Observed Concentrations"</span>             <span class="ot">=</span> <span class="st">"black"</span>,</span>
+<span id="cb69-69"><a href="#cb69-69" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Observed Median"</span>                     <span class="ot">=</span> <span class="st">"#1A2B1A"</span>,</span>
+<span id="cb69-70"><a href="#cb69-70" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Observed 80% CI"</span>                     <span class="ot">=</span> <span class="st">"#1A2B1A"</span></span>
+<span id="cb69-71"><a href="#cb69-71" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb69-72"><a href="#cb69-72" aria-hidden="true" tabindex="-1"></a>  <span class="at">breaks =</span> <span class="fu">c</span>(<span class="st">"Observed Concentrations"</span>, <span class="st">"Observed Median"</span>, <span class="st">"Observed 80% CI"</span>)</span>
+<span id="cb69-73"><a href="#cb69-73" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb69-74"><a href="#cb69-74" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(</span>
+<span id="cb69-75"><a href="#cb69-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">"AREAS"</span>,</span>
+<span id="cb69-76"><a href="#cb69-76" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> <span class="fu">c</span>(</span>
+<span id="cb69-77"><a href="#cb69-77" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Simulated Median 80% CI"</span>     <span class="ot">=</span> <span class="st">"#1A2B1A"</span>,</span>
+<span id="cb69-78"><a href="#cb69-78" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Simulation 80% PI"</span>           <span class="ot">=</span> <span class="st">"#1A2B1A"</span></span>
+<span id="cb69-79"><a href="#cb69-79" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb69-80"><a href="#cb69-80" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb69-81"><a href="#cb69-81" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(</span>
+<span id="cb69-82"><a href="#cb69-82" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="fu">guide_legend</span>(<span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">title.position =</span> <span class="st">"top"</span>),</span>
+<span id="cb69-83"><a href="#cb69-83" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill  =</span> <span class="fu">guide_legend</span>(<span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">title.position =</span> <span class="st">"top"</span>)</span>
+<span id="cb69-84"><a href="#cb69-84" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb69-85"><a href="#cb69-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-86"><a href="#cb69-86" aria-hidden="true" tabindex="-1"></a>vpcPlot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -2532,12 +2523,12 @@ No issues found -- the project is in a consistent state.</code></pre>
 <pre><code># A tibble: 6 × 18
   absolute_model_path      run   error_msg termination_code THETA1 THETA2 THETA3
   &lt;chr&gt;                    &lt;chr&gt; &lt;lgl&gt;                &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-1 D:/PROJECTS/ceftolozane… 001   NA                       0   30.5   6.10   51.8
-2 D:/PROJECTS/ceftolozane… 002   NA                       0   27.7   6.82   50.4
-3 D:/PROJECTS/ceftolozane… 003   NA                       0   21.2   5.38   34.7
-4 D:/PROJECTS/ceftolozane… 004   NA                       0   29.1   5.32   57.1
-5 D:/PROJECTS/ceftolozane… 005   NA                       0   31.1   6.07   46.6
-6 D:/PROJECTS/ceftolozane… 006   NA                       0   27.7   5.04   48.5
+1 D:/PROJECTS/ceftolozane… 001   NA                       0   27.1   4.85   42.9
+2 D:/PROJECTS/ceftolozane… 002   NA                       0   32.1   6.70   62.4
+3 D:/PROJECTS/ceftolozane… 003   NA                       0   28.8   5.56   64.3
+4 D:/PROJECTS/ceftolozane… 004   NA                       0   31.9   6.81   49.5
+5 D:/PROJECTS/ceftolozane… 005   NA                       0   28.7   5.43   52.8
+6 D:/PROJECTS/ceftolozane… 006   NA                       0   32.5   6.75   58.8
 # ℹ 11 more variables: THETA4 &lt;dbl&gt;, THETA5 &lt;dbl&gt;, `SIGMA(1,1)` &lt;dbl&gt;,
 #   `SIGMA(2,1)` &lt;dbl&gt;, `SIGMA(2,2)` &lt;dbl&gt;, `OMEGA(1,1)` &lt;dbl&gt;,
 #   `OMEGA(2,1)` &lt;dbl&gt;, `OMEGA(2,2)` &lt;dbl&gt;, `OMEGA(3,1)` &lt;dbl&gt;,
@@ -2676,12 +2667,12 @@ No issues found -- the project is in a consistent state.</code></pre>
 <pre><code># A tibble: 6 × 16
   run   THETA1 THETA2 THETA3 THETA4 THETA5 SIGMA11 SIGMA21 SIGMA22 OMEGA11
   &lt;chr&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
-1 001     30.5   6.10   51.8   14.2  0.879  0.0477       0  0.0673  0.0500
-2 002     27.7   6.82   50.4   15.3  0.845  0.0525       0  0.0693  0.138 
-3 003     21.2   5.38   34.7   11.5  0.888  0.0426       0  0.0751  0.0672
-4 004     29.1   5.32   57.1   14.5  0.689  0.0353       0  0.0703  0.0507
-5 005     31.1   6.07   46.6   13.3  0.841  0.0516       0  0.0664  0.107 
-6 006     27.7   5.04   48.5   13.4  0.780  0.0331       0  0.0640  0.0931
+1 001     27.1   4.85   42.9   12.4  0.824  0.0382       0  0.0574  0.0851
+2 002     32.1   6.70   62.4   17.2  1.02   0.0494       0  0.0635  0.0297
+3 003     28.8   5.56   64.3   15.7  0.681  0.0365       0  0.0736  0.0466
+4 004     31.9   6.81   49.5   16.3  1.15   0.0466       0  0.0522  0.0936
+5 005     28.7   5.43   52.8   14.9  0.852  0.0404       0  0.0684  0.0780
+6 006     32.5   6.75   58.8   14.9  0.825  0.0488       0  0.0589  0.0379
 # ℹ 6 more variables: OMEGA21 &lt;dbl&gt;, OMEGA22 &lt;dbl&gt;, OMEGA31 &lt;dbl&gt;,
 #   OMEGA32 &lt;dbl&gt;, OMEGA33 &lt;dbl&gt;, iter &lt;int&gt;</code></pre>
 </div>
@@ -2800,8 +2791,8 @@ No issues found -- the project is in a consistent state.</code></pre>
 <pre><code># A tibble: 3 × 4
   dose                              my    hy    ly
   &lt;chr&gt;                          &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-1 3g q8h tinf=3h 1CMT BOOTSTRAP   21.9  31.8  16.3
-2 3g q8h tinf=3h 1CMT COVARIANCE  19.9  27.0  13.6
+1 3g q8h tinf=3h 1CMT BOOTSTRAP   21.6  30.5  16.0
+2 3g q8h tinf=3h 1CMT COVARIANCE  19.9  26.9  13.6
 3 3g q8h tinf=3h 2CMT BAYES       27.0  31.1  21.8</code></pre>
 </div>
 <details class="code-fold">
@@ -2971,8 +2962,8 @@ No issues found -- the project is in a consistent state.</code></pre>
 <pre><code># A tibble: 3 × 4
   dose                               my    hy    ly
   &lt;chr&gt;                           &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-1 3g q12h tinf=3h 1CMT BOOTSTRAP   19.8  27.3  15.6
-2 3g q12h tinf=3h 1CMT COVARIANCE  18.1  23.3  12.7
+1 3g q12h tinf=3h 1CMT BOOTSTRAP   19.7  27.1  14.7
+2 3g q12h tinf=3h 1CMT COVARIANCE  18.1  23.2  12.4
 3 3g q12h tinf=3h 2CMT BAYES       24.3  27.7  20.2</code></pre>
 </div>
 <details class="code-fold">
@@ -3281,12 +3272,12 @@ No issues found -- the project is in a consistent state.</code></pre>
 <pre><code># A tibble: 6 × 18
   absolute_model_path      run   error_msg termination_code THETA1 THETA2 THETA3
   &lt;chr&gt;                    &lt;chr&gt; &lt;lgl&gt;                &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-1 D:/PROJECTS/ceftolozane… 001   NA                       0   30.5   6.10   51.8
-2 D:/PROJECTS/ceftolozane… 002   NA                       0   27.7   6.82   50.4
-3 D:/PROJECTS/ceftolozane… 003   NA                       0   21.2   5.38   34.7
-4 D:/PROJECTS/ceftolozane… 004   NA                       0   29.1   5.32   57.1
-5 D:/PROJECTS/ceftolozane… 005   NA                       0   31.1   6.07   46.6
-6 D:/PROJECTS/ceftolozane… 006   NA                       0   27.7   5.04   48.5
+1 D:/PROJECTS/ceftolozane… 001   NA                       0   27.1   4.85   42.9
+2 D:/PROJECTS/ceftolozane… 002   NA                       0   32.1   6.70   62.4
+3 D:/PROJECTS/ceftolozane… 003   NA                       0   28.8   5.56   64.3
+4 D:/PROJECTS/ceftolozane… 004   NA                       0   31.9   6.81   49.5
+5 D:/PROJECTS/ceftolozane… 005   NA                       0   28.7   5.43   52.8
+6 D:/PROJECTS/ceftolozane… 006   NA                       0   32.5   6.75   58.8
 # ℹ 11 more variables: THETA4 &lt;dbl&gt;, THETA5 &lt;dbl&gt;, `SIGMA(1,1)` &lt;dbl&gt;,
 #   `SIGMA(2,1)` &lt;dbl&gt;, `SIGMA(2,2)` &lt;dbl&gt;, `OMEGA(1,1)` &lt;dbl&gt;,
 #   `OMEGA(2,1)` &lt;dbl&gt;, `OMEGA(2,2)` &lt;dbl&gt;, `OMEGA(3,1)` &lt;dbl&gt;,
@@ -3434,55 +3425,57 @@ attached base packages:
 [8] base     
 
 other attached packages:
- [1] posterior_1.6.1      conflicted_1.2.0     PKNCA_0.11.0        
- [4] MESS_0.5.12          simpar_0.1.1         rlang_1.1.4         
- [7] furrr_0.3.1          future_1.68.0        tidybayes_3.0.7.9000
-[10] loo_2.8.0            magick_2.8.5         yaml_2.3.8          
-[13] magrittr_2.0.3       cowplot_1.1.3        gridExtra_2.3       
-[16] cmdstanr_0.8.1.9000  nmrec_0.4.0          pmtables_0.6.0.9000 
-[19] scales_1.3.0         here_1.0.1           whisker_0.4.1       
-[22] glue_1.7.0           stable_1.1.6         rmutil_1.1.10       
-[25] lubridate_1.9.3      forcats_1.0.0        stringr_1.5.1       
-[28] purrr_1.0.2          readr_2.1.5          tidyr_1.3.1         
-[31] tibble_3.2.1         tidyverse_2.0.0      data.table_1.16.2   
-[34] knitr_1.49           naniar_1.1.0         pmplots_0.4.0.9001  
-[37] vpc_1.2.2            mrggsave_0.4.5.9000  mrgsolve_1.5.2.9000 
-[40] patchwork_1.3.0      ggplot2_3.5.1        dplyr_1.1.4         
-[43] bayesplot_1.11.1     bbr.bayes_0.2.0      bbr_1.10.0          
-[46] pracma_2.4.4        
+ [1] posterior_1.6.1      conflicted_1.2.0     PKNCA_0.12.1        
+ [4] MESS_0.6.0           simpar_0.1.1         rlang_1.1.7         
+ [7] furrr_0.3.1          future_1.70.0        tidybayes_3.0.7.9000
+[10] loo_2.9.0            magick_2.9.1         yaml_2.3.12         
+[13] magrittr_2.0.4       cowplot_1.2.0        gridExtra_2.3       
+[16] cmdstanr_0.9.0.9000  nmrec_0.5.1          pmtables_0.10.1.9000
+[19] scales_1.4.0         here_1.0.2           whisker_0.4.1       
+[22] glue_1.8.0           stable_1.1.7         rmutil_1.1.10       
+[25] lubridate_1.9.5      forcats_1.0.1        stringr_1.6.0       
+[28] purrr_1.2.1          readr_2.2.0          tidyr_1.3.2         
+[31] tibble_3.3.1         tidyverse_2.0.0      data.table_1.18.2.1 
+[34] knitr_1.51           naniar_1.1.0         pmplots_0.5.2.9000  
+[37] vpc_1.2.4            mrggsave_0.4.7       mrgsolve_1.8.0.9000 
+[40] patchwork_1.3.2      ggplot2_4.0.2        dplyr_1.2.0         
+[43] bayesplot_1.15.0     bbr.bayes_0.4.0      bbr_1.15.0          
+[46] pracma_2.4.6        
 
 loaded via a namespace (and not attached):
- [1] RColorBrewer_1.1-3   geeM_0.10.1          tensorA_0.36.2.1    
- [4] rstudioapi_0.17.1    jsonlite_1.8.8       farver_2.1.2        
- [7] rmarkdown_2.29       geepack_1.3.12       fs_1.6.4            
-[10] ragg_1.3.3           vctrs_0.6.5          memoise_2.0.1       
-[13] askpass_1.2.1        htmltools_0.5.8.1    distributional_0.5.0
-[16] haven_2.5.4          broom_1.0.7          gridGraphics_0.5-1  
-[19] parallelly_1.45.1    KernSmooth_2.23-24   htmlwidgets_1.6.4   
-[22] pdftools_3.4.1       plyr_1.8.9           cachem_1.1.0        
-[25] lifecycle_1.0.4      pkgconfig_2.0.3      Matrix_1.6-1.1      
-[28] R6_2.6.1             fastmap_1.2.0        digest_0.6.37       
-[31] colorspace_2.1-0     GGally_2.2.1         ps_1.7.6            
-[34] rprojroot_2.0.4      textshaping_0.4.0    labeling_0.4.3      
-[37] timechange_0.3.0     mgcv_1.9-1           abind_1.4-8         
-[40] compiler_4.3.2       proxy_0.4-27         bit64_4.5.2         
-[43] withr_3.0.2          backports_1.4.1      ggstats_0.7.0       
-[46] MASS_7.3-60          classInt_0.4-10      tools_4.3.2         
-[49] visdat_0.6.0         clipr_0.8.0          nlme_3.1-164        
-[52] grid_4.3.2           ggformula_0.12.0     checkmate_2.3.1     
-[55] reshape2_1.4.4       generics_0.1.3       diffobj_0.3.5       
-[58] gtable_0.3.6         labelled_2.13.0      tzdb_0.4.0          
-[61] class_7.3-22         hms_1.1.3            utf8_1.2.4          
-[64] pillar_1.10.2        ggdist_3.3.2         vroom_1.6.5         
-[67] splines_4.3.2        lattice_0.22-6       renv_1.0.7          
-[70] bit_4.5.0.1          tidyselect_1.2.1     arrayhelpers_1.1-0  
-[73] xfun_0.49            mosaicCore_0.9.4.0   matrixStats_1.4.1   
-[76] stringi_1.8.4        qpdf_1.3.4           evaluate_1.0.1      
-[79] codetools_0.2-20     cli_3.6.3            systemfonts_1.1.0   
-[82] munsell_0.5.1        processx_3.8.4       Rcpp_1.0.12         
-[85] globals_0.18.0       coda_0.19-4.1        svUnit_1.0.6        
-[88] assertthat_0.2.1     listenv_0.9.1        e1071_1.7-16        
-[91] ggridges_0.5.6       crayon_1.5.3        </code></pre>
+ [1] RColorBrewer_1.1-3      geeM_0.10.1             tensorA_0.36.2.1       
+ [4] rstudioapi_0.18.0       jsonlite_2.0.0          farver_2.1.2           
+ [7] rmarkdown_2.30          ragg_1.5.2              geepack_1.3.13         
+[10] fs_2.0.1                vctrs_0.7.2             memoise_2.0.1          
+[13] askpass_1.2.1           htmltools_0.5.9         distributional_0.7.0   
+[16] haven_2.5.5             broom_1.0.12            gridGraphics_0.5-1     
+[19] parallelly_1.46.1       KernSmooth_2.23-26      htmlwidgets_1.6.4      
+[22] pdftools_3.7.0          plyr_1.8.9              cachem_1.1.0           
+[25] lifecycle_1.0.5         pkgconfig_2.0.3         Matrix_1.6-5           
+[28] R6_2.6.1                fastmap_1.2.0           digest_0.6.39          
+[31] GGally_2.4.0            ps_1.9.1                rprojroot_2.1.1        
+[34] textshaping_1.0.5       labeling_0.4.3          timechange_0.4.0       
+[37] mgcv_1.9-1              abind_1.4-8             compiler_4.3.2         
+[40] proxy_0.4-29            bit64_4.6.0-1           fontquiver_0.2.1       
+[43] withr_3.0.2             S7_0.2.1                backports_1.5.0        
+[46] ggstats_0.13.0          MASS_7.3-60.0.1         classInt_0.4-11        
+[49] tools_4.3.2             otel_0.2.0              visdat_0.6.0           
+[52] clipr_0.8.0             callr_3.7.6             nlme_3.1-168           
+[55] grid_4.3.2              ggformula_1.0.1         checkmate_2.3.4        
+[58] reshape2_1.4.5          generics_0.1.4          diffobj_0.3.6          
+[61] gtable_0.3.6            labelled_2.16.0         tzdb_0.5.0             
+[64] class_7.3-23            hms_1.1.4               utf8_1.2.6             
+[67] pillar_1.11.1           ggdist_3.3.3            vroom_1.7.0            
+[70] splines_4.3.2           lattice_0.22-9          renv_1.2.0             
+[73] bit_4.6.0               tidyselect_1.2.1        fontLiberation_0.1.0   
+[76] fontBitstreamVera_0.1.1 arrayhelpers_1.1-0      xfun_0.57              
+[79] mosaicCore_0.9.5        matrixStats_1.5.0       stringi_1.8.7          
+[82] qpdf_1.4.1              evaluate_1.0.5          codetools_0.2-20       
+[85] gdtools_0.5.0           cli_3.6.5               systemfonts_1.3.2      
+[88] processx_3.8.6          Rcpp_1.1.1              globals_0.19.1         
+[91] coda_0.19-4.1           svUnit_1.0.8            assertthat_0.2.1       
+[94] listenv_0.10.1          ggiraph_0.9.6           e1071_1.7-17           
+[97] ggridges_0.5.7          crayon_1.5.3           </code></pre>
 </div>
 </div>
 </section>
