@@ -7,12 +7,9 @@ nmfe_options:
   maxlim: 2
 nonmem:
   nm74g64:
+    default: yes
     executable: nmfe74.bat
     home: C:\nm74g64
-  nm75g64:
-    executable: nmfe75.bat
-    home: C:\nm75g64
-    default: yes
 output_dir: '{{ .Name }}'
 parallel: yes
 parallel_timeout: 2147483647

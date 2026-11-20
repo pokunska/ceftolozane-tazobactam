@@ -1,6 +1,6 @@
 make_standata <- function(.dir) {
   ## get data file
-  xdata <- readr::read_csv(file.path(.dir, "..", "..", "..", "..", "data", "derived", "RawData.csv"))
+  xdata <- readr::read_csv(here::here("data", "derived", "RawData.csv"))
 
   #' Format data for Stan
   nt   <- nrow(xdata)
