@@ -1,0 +1,1002 @@
+---
+title: "Pharmacokinetics of ceftolozane with tazobactam in critically ill patients - Bayesian approach"
+author:  
+  - Paulina Okuńska (okunskapaul@gmail.com)
+  - Pawel Wiczling
+date: today
+date-format: long
+format:
+  html:
+    toc: true
+    code-fold: true
+  pdf:
+    tov: true
+    lof: true
+    lot: true
+execute:
+  warning: false
+  
+params:
+  run: "5"
+  modelDir: here::here("model/BAYES")
+  script: "ceftaz-analysis-bayes_stan.qmd"
+  n_per_page: 4
+  include_code: TRUE
+  include_plots: TRUE
+# n_thin: select every `n_thin` samples for trace/density plots
+  n_thin: 1
+# n_thin2: select every `n_thin2` samples for Bayes pairs plots
+  n_thin2: 10
+# theta_cov: indices of covariate THETAs to separate when creating pairs plots, e.g. !r c(1, 2, 6)
+#   set to NULL to create a single pairs plot for THETAs
+  theta_cov: NULL
+---
+
+**Introduction**
+
+Comprehensive Bayesian model analysis of population pharmacokinetics of ceftolozane/tazobactam.
+This script includes analyses of MCMC chains, assessments of model goodness-of-fit, and probability of target attainment (PTA) analyses comparing a one-compartment covariance model, a one-compartment bootstrap model, and a two-compartment Bayesian model.
+
+piors based on: Larson, K. B. et al. Ceftolozane-Tazobactam Population Pharmacokinetics and Dose Selection for Further Clinical Evaluation in Pediatric Patients with Complicated Urinary Tract or Complicated Intra-Abdominal Infections. https://doi.org/10 
+
+
+```{r setuphtml, include=FALSE}
+# devtools::install_github("metrumresearchgroup/bbr", ref = "main")
+# devtools::install_github("metrumresearchgroup/bbr.bayes", ref = "main")
+# devtools::install_github("metrumresearchgroup/pmplots")
+# devtools::install_github("metrumresearchgroup/pmtables")
+# devtools::install_github("mjskay/tidybayes")
+# remotes::install_github("metrumresearchgroup/nmrec")
+```
+
+## Settings
+
+```{r loadlibrary, message=FALSE, warning=FALSE}
+
+options(renv.config.dependencies.limit = Inf)
+renv::status()
+
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  eval = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  cache = TRUE, 
+  dpi = 300)
+
+library(pracma)
+library(bbr)
+library(bbr.bayes)
+library(bayesplot)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(mrgsolve)
+library(mrggsave)
+library(vpc)
+library(pmplots)
+library(naniar)
+library(knitr)
+library(data.table)
+library(tidyverse)
+library(stable)
+library(glue)
+library(whisker)
+library(here)
+library(scales)
+library(pmplots)
+library(pmtables) 
+library(nmrec)
+library(cmdstanr)
+library(gridExtra)
+library(cowplot)
+#library(posterior)
+library(magrittr)
+library(yaml)
+library(magick)
+library(patchwork)
+library(loo)
+library(tidybayes)
+library(furrr) 
+library(future)
+library(rlang)
+library(simpar)
+library(MESS)
+library(PKNCA)
+library(conflicted)
+library(parallel)
+library(ggrepel)
+suppressPackageStartupMessages(library(posterior))
+suppressPackageStartupMessages(library(tidyverse))
+
+# conflicts
+
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("summarize", "dplyr")
+conflict_prefer("as.data.frame", "base")
+conflict_prefer("sd", "posterior")
+conflict_prefer("mad", "posterior")
+conflict_prefer("rhat", "posterior")
+
+set_cmdstan_path("C:/Users/pawel/Documents/.cmdstan/Torsten-torsten_v0.92.0/Torsten-torsten_v0.92.0/cmdstan")
+
+# helper functions
+source(here::here("scripts/helpers/functions-table.R"))
+source(here::here("scripts/helpers/functions-plots.R"))
+source(here::here("scripts/helpers/functions-mcmc-diagnostics.R"))
+source(here::here("scripts/helpers/functions-diagnostics-rhat-ess.R"))
+source(here::here("scripts/helpers/resampling_functions.R"))
+
+# table summary 
+
+sigfun = function(.x){sig(.x,digits=3)}
+
+thisScript <- "ceftaz-analysis-bayes_stan.qmd"
+
+thisScript <- params$script
+options(
+  mrg.script = params$script,
+  mrggsave.dev = "pdf,png"
+)
+
+```
+
+
+```{r settings}
+
+#directory
+data_dir <- here::here("data","derived") 
+model_dir <- here::here("model","BAYES")  
+figure_dir <- here::here("deliv","figures")
+table_dir <- here::here("deliv","tables")
+figure_mcmc_dir <- here::here("deliv", "figures", "MCMC")
+
+thisFigDir <- file.path(figure_mcmc_dir, params$run)
+options(mrggsave.dir = thisFigDir)
+
+source(here("scripts/helpers/helper_model_diagnostic.R"))
+
+if (!file.exists(figure_mcmc_dir)) dir.create(figure_mcmc_dir)
+
+cmdstanr::check_cmdstan_toolchain()
+
+#bbr
+
+options(bbr.bbi_exe_path = "C:/Users/pawel/AppData/Roaming/bbi/bbi.exe") ### need to be changed to your directory
+
+bbr::use_bbi()
+
+bbi_init(.dir = model_dir,            # the directory to create the bbi.yaml in
+         .nonmem_dir = "C:/",         # location of NONMEM installation
+         .nonmem_version = "nm74g64",  # default NONMEM version to use
+.bbi_args = list(
+      parallel = TRUE,
+      threads = 4
+    )
+)
+
+#       mpi_exec_path ="C:/nm75g64/run/psexec",
+#       parafile = "C:/nm75g64/run/fpiwini8.pnm",
+
+this_theme <- pmplots::pm_theme() + theme(text = element_text(size = 12), axis.text = element_text(size = 10))
+theme_set(this_theme)
+
+```
+
+# Data
+
+Load data:
+
+```{r load-data}
+
+xdata <- read.csv(paste0(data_dir, "/", "RawData.csv", na.strings = "."))
+
+head(xdata)
+
+```
+
+## Stan
+
+```{r  model5, results = "asis"}
+#mod5_res <- mod5 %>% submit_model(.overwrite = TRUE) 
+
+mod5  <- read_model(file.path(model_dir, params$run))
+mod5
+mod5_res <- read_fit_model(mod5)
+```
+
+```{r  model5a, results = "asis"}
+mod5a  <- read_model(file.path(model_dir,"5a"))
+#mod5a_res <- mod5a %>% submit_model(.overwrite = TRUE) 
+
+
+mod5a
+mod5a_res <- read_fit_model(mod5a)
+```
+
+```{r  model6, results = "asis"}
+mod6  <- read_model(file.path(model_dir, "6"))
+#mod6_res <- mod6 %>% submit_model(.overwrite = TRUE) 
+
+mod6
+mod6_res <- read_fit_model(mod6)
+```
+
+```{r  model6a, results = "asis"}
+mod6a  <- read_model(file.path(model_dir, "6a"))
+#mod6a_res <- mod6a %>% submit_model(.overwrite = TRUE) 
+
+mod6a
+mod6a_res <- read_fit_model(mod6a)
+```
+
+# Diagnostics from cmdstanr
+
+## Tables
+
+```{r table}
+
+pars = c("lp__", "CLCHat", "QCHat", "V1CHat", "V2CHat",
+         "CLTHat", "QTHat", "V1THat", "V2THat",
+         "omega", "sigma","nu")
+ptable <- mod5_res$summary(c(pars)) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>% 
+  rename(parameter = variable) %>%
+  mutate("90% CI" = paste("(", q5, ", ", q95, ")", 
+                          sep = "")) %>%
+select(parameter, mean, median, sd, mad, "90% CI", ess_bulk, ess_tail, rhat)
+ptable
+
+```
+
+
+```{r parameters table}
+
+pars1 <- c("CLCHat", "QCHat", "V1CHat", "V2CHat",
+           "CLTHat", "QTHat", "V1THat", "V2THat",
+           "omega", "sigma", "nu")
+
+thetas <- c("CLCHat", "QCHat", "V1CHat", "V2CHat",
+            "CLTHat", "QTHat", "V1THat", "V2THat")
+
+rest   <- c("omega[1]", "omega[2]", "omega[3]", "omega[4]", 
+            "omega[5]", "omega[6]", "omega[7]", "omega[8]",
+            "sigma[1]", "sigma[2]", "nu[1]", "nu[2]")
+
+theta_names <- c("CLC", "QC", "V1C", "V2C", "CLT", "QT", "V1T", "V2T") 
+
+ptable_all <- mod5_res$summary(c(pars1)) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>%
+  rename(parameter = variable) %>%
+  mutate(`90% CI` = paste0("(", q5, ", ", q95, ")")) %>%
+  select(parameter, mean, median, sd, mad, `90% CI`, rhat)
+
+gtGreek <- function(text) {
+  case_when(
+    text %in% c("CLC", "QC", "V1C", "V2C", "CLT", "QT", "V1T", "V2T") ~ 
+      paste0("\\theta_{\\text{", text, "}}"),
+    text == "omega" ~ "\\Omega",
+    text == "sigma" ~ "\\Sigma",
+    text == "nu"    ~ "\\nu",
+    TRUE ~ text)
+}
+
+mathMode <- function(x) paste0("$", x, "$")
+
+formatGreekNames <- function(df) {
+  df %>%
+    mutate(is_theta = str_ends(parameter, "Hat$"),
+           base = if_else(is_theta, str_remove(parameter, "Hat$"), parameter)) %>%
+    mutate(greek = mathMode(gtGreek(base))) %>%
+    select(parameter = greek,
+           mean, median, sd, mad, `90% CI`, rhat)
+}
+
+ptable1_greek <- ptable_all %>%
+  filter(parameter %in% thetas) %>%
+  formatGreekNames()
+
+ptable2_greek <- ptable_all %>%
+  filter(parameter %in% rest) %>%
+  formatGreekNames()
+
+param_df <- bind_rows(ptable1_greek, ptable2_greek) %>%
+  arrange(!str_detect(parameter, "Omega|Sigma|nu"), parameter)
+
+footAbbrev <- "Abbreviations: SD = standard deviation; MAD = Median Absolute Deviation; CI = confidence intervals; R-hat = Gelman–Rubin convergence diagnostic"
+
+fixed <- param_df %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.5), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() 
+
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable parameters table, out.width='100%'}
+st_as_image(fixed)
+```
+:::
+
+```{r rests table}
+ptable_rest <- mod5_res$summary(rest) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>%
+  rename(parameter = variable) %>%
+  mutate(`90% CI` = paste0("(", q5, ", ", q95, ")")) %>%
+  select(parameter, mean, median, sd, mad, `90% CI`, rhat) %>%
+  mutate(base = str_extract(parameter, "^[a-z]+"),
+         index = as.numeric(str_extract(parameter, "\\d+")),
+         index_text = case_when(
+           base == "omega" ~ theta_names[index],
+           base == "sigma" ~ paste0("sigma", index),
+           base == "nu"    ~ paste0("nu", index)),
+         parameter = case_when(
+           base == "omega" ~ paste0("$\\Omega_{\\text{", index_text, "}}$"),
+           base == "sigma" ~ paste0("$\\Sigma_{", index, "}$"),
+           base == "nu"    ~ paste0("$\\nu_{",    index, "}$"))) %>%
+  select(-base, -index, -index_text)
+
+rests <- ptable_rest %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.0), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() 
+
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable rests table, out.width='100%'}
+st_as_image(rests)
+```
+:::
+
+
+```{r add 95CI}
+
+theta_params <- thetas
+omega_sigma_params <- rest[str_detect(rest, "omega|sigma")]
+other_params <- rest[str_detect(rest, "nu")]
+sigma_params <- c("sigma[1]", "sigma[2]")
+
+footAbbrev <- "Abbreviations: SD = standard deviation; MAD = Median Absolute Deviation; CI = confidence intervals; R-hat = Gelman–Rubin convergence diagnostic"
+
+pars <- c("lp__", pars1)
+
+draws <- mod5_res$draws(pars)
+
+sig <- function(x, digits=2) round(x, digits)
+
+ptable_all <- summarise_draws(
+  draws,
+  mean,
+  median,
+  sd,
+  mad,
+  q2.5  = ~quantile(.x, 0.025),
+  q5    = ~quantile(.x, 0.05),
+  q95   = ~quantile(.x, 0.95),
+  q97.5 = ~quantile(.x, 0.975),
+  ess_bulk,
+  ess_tail,
+  rhat) %>%
+  rename(parameter = variable) %>%
+  mutate(
+     `%RSE` = if_else(mean != 0, (sd / mean) * 100, NA_real_),    
+    `CV%`  = if_else(parameter %in% omega_sigma_params & mean != 0, (sd / mean) * 100, NA_real_)) %>% 
+  mutate(
+    `%RSE` = if_else(parameter %in% theta_params, formatC(`%RSE`, format = "f", digits = 2), NA_character_),
+    `CV%`  = if_else(parameter %in% omega_sigma_params, formatC(`CV%`, format = "f", digits = 3), NA_character_)) %>%  
+  mutate(
+    mean  = if_else(parameter %in% theta_params, formatC(mean,  format = "f", digits = 2),
+                     formatC(mean,  format = "f", digits = 3)),
+    median= if_else(parameter %in% theta_params, formatC(median, format = "f", digits = 2),
+                     formatC(median, format = "f", digits = 3)),
+    sd    = if_else(parameter %in% theta_params, formatC(sd, format = "f", digits = 2),
+                     formatC(sd, format = "f", digits = 3)),
+    mad   = if_else(parameter %in% theta_params, formatC(mad, format = "f", digits = 2),
+                     formatC(mad, format = "f", digits = 3)),
+    `%RSE`= if_else(parameter %in% theta_params, formatC(`%RSE`, format = "f", digits = 2), `%RSE`),
+    `CV%` = if_else(parameter %in% omega_sigma_params, formatC(`CV%`, format = "f", digits = 2), `CV%`),
+    `2.5%`  = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`2.5%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params, 
+                               formatC(as.numeric(`2.5%`), format = "f", digits = 4),
+                               formatC(as.numeric(`2.5%`), format = "f", digits = 3))),
+    `5%`    = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`5%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params,
+                               formatC(as.numeric(`5%`), format = "f", digits = 4),
+                               formatC(as.numeric(`5%`), format = "f", digits = 3))),
+    `95%`   = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`95%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params,
+                               formatC(as.numeric(`95%`), format = "f", digits = 4),
+                               formatC(as.numeric(`95%`), format = "f", digits = 3))),
+    `97.5%` = if_else(parameter %in% theta_params,
+                       formatC(as.numeric(`97.5%`), format = "f", digits = 2),
+                       if_else(parameter %in% sigma_params,
+                               formatC(as.numeric(`97.5%`), format = "f", digits = 4),
+                               formatC(as.numeric(`97.5%`), format = "f", digits = 3)))) %>%
+    mutate(across(c("mean", "sd", "2.5%", "97.5%"), 
+                  ~if_else(parameter %in% c("sigma[1]", "sigma[2]"),
+                           formatC(as.numeric(.), format = "f", digits = 4), .))) %>% 
+  mutate(`90% CI` = paste0("(", `5%`, ", ", `95%`, ")"),
+         `95% CI` = paste0("(", `2.5%`, ", ", `97.5%`, ")")) %>% 
+  mutate(ess_bulk = round(ess_bulk, 0), ess_tail = round(ess_tail,0), rhat = round(rhat, 2)) %>% 
+  select(parameter, mean, median, sd, mad, `%RSE`, `CV%`,  `95% CI`, ess_bulk, ess_tail, rhat) #`90% CI`,
+
+gtGreek <- function(text) {
+  case_when(
+    text %in% c("CLC", "QC", "V1C", "V2C", "CLT", "QT", "V1T", "V2T") ~ 
+      paste0("\\theta_{\\text{", text, "}}"),
+    text == "omega" ~ "\\Omega",
+    text == "sigma" ~ "\\Sigma",
+    text == "nu"    ~ "\\nu",
+    TRUE ~ text
+  )
+}
+
+mathMode <- function(x) paste0("$", x, "$")
+
+formatGreekNames <- function(df) {
+  df %>%
+    mutate(is_theta = str_ends(parameter, "Hat$"),
+           base = if_else(is_theta, str_remove(parameter, "Hat$"), parameter)) %>%
+    mutate(greek = mathMode(gtGreek(base))) %>%
+    select(parameter = greek,
+           mean, median, sd, mad, `%RSE`, `CV%`,  `95% CI`, ess_bulk, ess_tail, rhat) #`90% CI`,
+}
+
+ptable1_greek <- ptable_all %>%
+  filter(parameter %in% thetas) %>%
+  formatGreekNames()
+
+ptable2_greek <- ptable_all %>%
+  filter(parameter %in% rest) %>%
+  formatGreekNames()
+
+param_df <- bind_rows(ptable1_greek, ptable2_greek) %>%
+  arrange(!str_detect(parameter, "Omega|Sigma|nu"), parameter)
+
+fixed <- param_df %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.5), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable()  
+
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable add 95CI, out.width='100%'}
+st_as_image(fixed)
+```
+:::
+
+```{r add 95CI rests}
+
+ptable_rest <- ptable_all %>%
+  filter(parameter %in% rest) %>%
+  mutate(base = str_extract(parameter, "^[a-z]+"),
+         index = as.numeric(str_extract(parameter, "\\d+")),
+         index_text = case_when(
+           base == "omega" ~ theta_names[index],
+           base == "sigma" ~ paste0("sigma", index),
+           base == "nu"    ~ paste0("nu", index)),
+         parameter = case_when(
+           base == "omega" ~ paste0("$\\Omega_{\\text{", index_text, "}}$"),
+           base == "sigma" ~ paste0("$\\Sigma_{", index, "}$"),
+           base == "nu"    ~ paste0("$\\nu_{",    index, "}$"))) %>%
+  select(parameter, mean, median, sd, mad, `%RSE`,`CV%`,  `95% CI`, rhat) #`90% CI`,
+
+rests <- ptable_rest %>%
+  st_new() %>%
+  st_center(desc = col_ragged(6.0), abb = "l") %>%
+  st_rename("Mean" = "mean", "Median" = "median", "SD" = "sd", "MAD" = "mad") %>%
+  st_blank("abb", "greek", "desc") %>%
+  st_files(r = NULL) %>%
+  st_notes(footAbbrev) %>%
+  st_noteconf(type = "minipage") %>%
+  stable() 
+
+```
+
+::: {.content-visible when-format="html"}
+```{r htmltable add 95CI rests, out.width='100%'}
+st_as_image(rests)
+```
+:::
+
+
+```{r table-corr}
+
+pars2 = c("lp__", "rho")
+ptable <- mod5_res$summary(c(pars2)) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>% 
+  rename(parameter = variable) %>%
+  mutate("90% CI" = paste("(", q5, ", ", q95, ")", 
+                          sep = "")) %>%
+select(parameter, mean, median, sd, mad, "90% CI", ess_bulk, ess_tail, rhat)
+ptable
+
+```
+
+## MCMC
+
+```{r trace-plots}
+
+color_scheme_set("mix-blue-red")
+
+bayesplot::mcmc_trace(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_trace(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_trace(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_trace(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_dens_overlay(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_trace_highlight(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars)) + legend_move("bottom")
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars[1:9])) + legend_move("bottom")
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars[10])) + legend_move("bottom")
+bayesplot::mcmc_rank_overlay(mod5_res$draws(pars[11:12])) + legend_move("bottom")
+
+
+plot_title <- ggtitle("Posterior distributions",
+                      "with medians and 80% intervals")
+
+# bayesplot::mcmc_areas(mod5_res$draws(pars[1]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[2:5]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[6:9]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[10]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[11]),prob = 0.8) + plot_title + legend_move("bottom")
+# bayesplot::mcmc_areas(mod5_res$draws(pars[12]),prob = 0.8) + plot_title + legend_move("bottom")
+
+```
+
+
+```{r mcm areas}
+
+plot_title <- ggtitle("Posterior distributions",
+                      "with medians and 80% intervals")
+
+bayesplot::mcmc_areas(mod5_res$draws(pars[1]),prob = 0.8) + plot_title + legend_move("bottom") + scale_y_discrete(labels = c("lp__" = expression(lp)))
+bayesplot::mcmc_areas(mod5_res$draws(pars[2:5]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("CLCHat" = expression(theta[CLC]), 
+                              "QCHat" = expression(theta[QC]),
+                              "V1CHat" = expression(theta[V1C]),
+                              "V2CHat" = expression(theta[V2C])),
+                   limits = t(rev(c("CLCHat", "QCHat", "V1CHat",  "V2CHat" ))))
+bayesplot::mcmc_areas(mod5_res$draws(pars[6:9]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("CLTHat" = expression(theta[CLT]),
+                              "QTHat" = expression(theta[QT]),
+                              "V1THat" = expression(theta[V1T]),
+                              "V2THat" = expression(theta[V2T])),
+                   limits = t(rev(c("CLTHat", "QTHat", "V1THat",  "V2THat" ))))
+bayesplot::mcmc_areas(mod5_res$draws(pars[10]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("omega[1]" = expression(omega[CLC]), 
+                              "omega[2]" = expression(omega[QC]),
+                              "omega[3]" = expression(omega[V1C]),
+                              "omega[4]" = expression(omega[V2C]),
+                              "omega[5]" = expression(omega[CLT]),
+                              "omega[6]" = expression(omega[QT]),
+                              "omega[7]" = expression(omega[V1T]),
+                              "omega[8]" = expression(omega[V2T])), 
+                   limits = t(rev(c("omega[1]","omega[2]","omega[3]","omega[4]","omega[5]","omega[6]","omega[7]","omega[8]"))))
+bayesplot::mcmc_areas(mod5_res$draws(pars[11]),prob = 0.8) + plot_title + legend_move("bottom") + 
+  scale_y_discrete(labels = c("sigma[1]" = expression(sigma[C]),
+                              "sigma[2]" = expression(sigma[T])),
+                    limits = rev(c("sigma[1]", "sigma[2]")))
+  
+bayesplot::mcmc_areas(mod5_res$draws(pars[12]),prob = 0.8) + plot_title + legend_move("bottom") +
+  scale_y_discrete(labels = c("nu[1]" = expression(nu[C]),
+                              "nu[2]" = expression(nu[T])),
+                   limits = rev(c("nu[1]", "nu[2]")))
+```
+
+## Shrinkage
+
+```{r shrinkage}
+
+etas <-  posterior::as_draws_df(mod5_res$draws("etaM"))%>%
+  mutate(across(starts_with("eta"), ~log(.x)))
+#errors <-  posterior::as_draws_df(mod_to_plot$draws("errors"))
+
+bbr.bayes::shrinkage(etas,"etaM",group_idx = 1, use_sd = TRUE)
+#bbr.bayes::shrinkage(errors,"errors", use_sd = TRUE)
+```
+
+## ETAS vs. covariates
+
+```{r covariets vs etas}
+
+etaM <- extract_etas_fun(mod5_res,xdata)
+
+model_figures_dir <- here::here("deliv", "figures", "BAYES")
+
+cont_cov = c("AGE//Age,y","BW//Body Weight, kg")
+cat_cov = c("SEX//Sex")
+
+p1 <- map(cont_cov, \(x) fun_cont_cov(x,etaM))
+p2 <- map(cat_cov, \(x) fun_cat_cov(x,etaM))
+
+plots <- c(p1, p2)
+plots
+map(1:length(plots), \(x) ggsave(filename = here::here(model_figures_dir, 
+                                 glue::glue("cov-plots-{x}.png")),
+                                 plot = plots[[x]], 
+                                 width=12, height=10, 
+                                 dpi=600, units="cm"))
+
+```
+
+## ETA correlation
+
+```{r ETA corr}
+
+t1 <- etaM  %>% 
+  filter(type %in% c("V1C", "V1T")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  ggplot() +
+  geom_point(aes(x = medianInd_V1C, y = medianInd_V1T))
+
+
+t2 <- etaM  %>% 
+  filter(type %in% c("CLC", "CLT")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  ggplot() +
+  geom_point(aes(x = medianInd_CLC, y = medianInd_CLT))
+
+t1 + t2
+
+etaM  %>% 
+  filter(type %in% c("CLC", "CLT", "V1C", "V1T")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  pairs_plot(c("medianInd_CLC//CLC", "medianInd_CLT//CLT", "medianInd_V1C//V1C","medianInd_V1T//V1T"))
+
+etaM  %>% 
+  filter(type %in% c("CLC", "CLT", "V1C", "V1T", "QC", "QT", "V2C", "V2T")) %>% 
+  pivot_wider(values_from = 3:6, names_from = "type") %>% 
+  pairs_plot(c("medianInd_CLC//CLC", "medianInd_CLT//CLT", "medianInd_V1C//V1C","medianInd_V1T//V1T", "medianInd_QC//QC", "medianInd_QT//QT", "medianInd_V2C//V2C","medianInd_V2T//V2T"))
+
+```
+
+## Prior vs posterior params
+
+```{r prior vs posterior}
+
+modx  <- read_model(here::here(model_dir, "6"))
+mod_to_plot1 <- read_fit_model(modx)
+modx  <- read_model(here::here(model_dir, "5"))
+mod_to_plot2 <- read_fit_model(modx)
+modx  <- read_model(here::here(model_dir, "5a"))
+mod_to_plot3 <- read_fit_model(modx)
+
+modx  <- read_model(here::here(model_dir, "6a"))
+mod_to_plot4 <- read_fit_model(modx)
+
+pars = c("CLCHat", "QCHat", "V1CHat", "V2CHat", "CLTHat", "QTHat", "V1THat", "V2THat")
+p1=bayesplot::mcmc_intervals(mod_to_plot1$draws(pars))
+p2=bayesplot::mcmc_intervals(mod_to_plot2$draws(pars))
+p3=bayesplot::mcmc_intervals(mod_to_plot3$draws(pars))
+p4=bayesplot::mcmc_intervals(mod_to_plot4$draws(pars))
+
+p1_data = p1@data %>% mutate(type = "prior (%CV=25%)")
+p4_data = p4@data %>% mutate(type = "prior (%CV=50%)")
+p2_data = p2@data %>% mutate(type = "posterior (%CV=25%)")
+p3_data = p3@data %>% mutate(type = "posterior (%CV=50%)")
+
+#  plot1 <- rbind(p1_data,p2_data,p3_data,p4_data)%>%
+#   ggplot(aes(y=type, x=m))+
+#   geom_point(size=2, color = "#4A2C2A")+
+#   geom_linerange(aes(xmin = l, xmax = h), size=1,color = "#4A2C2A")+
+#   geom_linerange(aes(xmin = ll, xmax = hh),color = "#4A2C2A")+
+#   labs(x="",y="")+
+#   theme(strip.background = element_blank()) +
+#   facet_wrap(~parameter, scales="free_x")
+# 
+# plot1
+# 
+# res_both <- rbind(p1_data,p2_data) %>% 
+#   select(c("parameter", "ll", "m", "hh", "type")) %>% 
+#   group_by(parameter) %>% 
+#   arrange(parameter) %>% 
+#   mutate(across(where(is.numeric), round, 2)) %>% 
+#   ungroup()
+# 
+# res_both
+
+theta_labels <- c(
+  CLCHat = "theta[CLC]",
+  QCHat  = "theta[QC]",
+  V1CHat = "theta[V1C]",
+  V2CHat = "theta[V2C]",
+  CLTHat = "theta[CLT]",
+  QTHat  = "theta[QT]",
+  V1THat = "theta[V1T]",
+  V2THat = "theta[V2T]")
+
+plot2 <- rbind(p1_data, p2_data, p3_data, p4_data) %>%
+  mutate(parameter = theta_labels[parameter], parameter = factor(parameter, levels = c("theta[CLC]", "theta[QC]", "theta[V1C]", "theta[V2C]", "theta[CLT]", "theta[QT]", "theta[V1T]", "theta[V2T]"))) %>%
+  ggplot(aes(y = type, x = m)) +
+  geom_point(size = 2, color = "#4A2C2A") +
+  geom_linerange(aes(xmin = l, xmax = h), size = 1, color = "#4A2C2A") +
+  geom_linerange(aes(xmin = ll, xmax = hh), color = "#4A2C2A") +
+  labs(x = "", y = "") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 11)) +
+  facet_wrap(~parameter, scales = "free_x", labeller = label_parsed)
+
+plot2
+
+```
+
+```{r sensitivity1}
+#  posterior z-scores and posterior shrinkages 
+# Calibrating Model-Based Inferences
+# and Decisions
+# Michael Betancourt
+
+draws_prior <- posterior::as_draws_matrix(
+  mod_to_plot1$draws(variables = pars)
+)
+
+draws_post <- posterior::as_draws_matrix(
+  mod_to_plot2$draws(variables = pars)
+)
+
+# Summarise distributions
+summarise_draws <- function(x, type) {
+
+  as.data.frame(x) %>%
+    pivot_longer(
+      cols = everything(),
+      names_to = "parameter",
+      values_to = "value"
+    ) %>%
+    group_by(parameter) %>%
+    summarise(
+      mean = mean(log(value)),
+      sd = sd(log(value)),
+      var = posterior::var(log(value)),
+      .groups = "drop"
+    ) %>%
+    mutate(type = type)
+}
+
+prior_summary <- summarise_draws(draws_prior, "prior")
+post_summary  <- summarise_draws(draws_post, "posterior")
+
+sensitivity_df <- prior_summary %>%
+  select(
+    parameter,
+    prior_mean = mean,
+    prior_sd = sd,
+    prior_var = var
+  ) %>%
+  left_join(
+    post_summary %>%
+      select(
+        parameter,
+        post_mean = mean,
+        post_sd = sd,
+        post_var = var
+      ),
+    by = "parameter"
+  ) %>%
+  mutate(
+    # Standardized posterior shift
+    z_prior = abs(post_mean - prior_mean) / prior_sd,
+
+    # Signed standardized posterior shift
+    z_signed = (post_mean - prior_mean) / prior_sd,
+
+    # Variance-based posterior shrinkage
+    shrinkage = 1 - post_var / prior_var
+  )
+
+sensitivity_df
+
+p_sens_1 <- ggplot(
+  sensitivity_df,
+  aes(x = shrinkage, y = z_prior, label = parameter)
+) +
+  geom_point(size = 1) +
+geom_text_repel(
+  size = 2,
+  direction = "y",
+  box.padding = 0.3,
+  max.overlaps = Inf,
+  segment.size = 0.1,
+  segment.alpha = 0.5
+) +
+  geom_hline(
+    yintercept = 1,
+    linetype = 2,
+    colour = "grey50"
+  ) +
+  geom_vline(
+    xintercept = 0.5,
+    linetype = 2,
+    colour = "grey50"
+  ) +
+  labs(
+    x = "Posterior shrinkage",
+    y = "Prior-standardized posterior shift",
+    title = "%CV = 25%"
+  ) +
+  theme_bw()
+```
+
+```{r sensitivity2}
+#  posterior z-scores and posterior shrinkages 
+# Calibrating Model-Based Inferences
+# and Decisions
+# Michael Betancourt
+
+draws_prior <- posterior::as_draws_matrix(
+  mod_to_plot4$draws(variables = pars)
+)
+
+draws_post <- posterior::as_draws_matrix(
+  mod_to_plot3$draws(variables = pars)
+)
+
+# Summarise distributions
+summarise_draws <- function(x, type) {
+
+  as.data.frame(x) %>%
+    pivot_longer(
+      cols = everything(),
+      names_to = "parameter",
+      values_to = "value"
+    ) %>%
+    group_by(parameter) %>%
+    summarise(
+      mean = mean(log(value)),
+      sd = sd(log(value)),
+      var = posterior::var(log(value)),
+      .groups = "drop"
+    ) %>%
+    mutate(type = type)
+}
+
+prior_summary <- summarise_draws(draws_prior, "prior")
+post_summary  <- summarise_draws(draws_post, "posterior")
+
+sensitivity_df <- prior_summary %>%
+  select(
+    parameter,
+    prior_mean = mean,
+    prior_sd = sd,
+    prior_var = var
+  ) %>%
+  left_join(
+    post_summary %>%
+      select(
+        parameter,
+        post_mean = mean,
+        post_sd = sd,
+        post_var = var
+      ),
+    by = "parameter"
+  ) %>%
+  mutate(
+    # Standardized posterior shift
+    z_prior = abs(post_mean - prior_mean) / prior_sd,
+
+    # Signed standardized posterior shift
+    z_signed = (post_mean - prior_mean) / prior_sd,
+
+    # Variance-based posterior shrinkage
+    shrinkage = 1 - post_var / prior_var
+  )
+
+p_sens_2 <- ggplot(
+  sensitivity_df,
+  aes(x = shrinkage, y = z_prior, label = parameter)
+) +
+  geom_point(size = 1) +
+geom_text_repel(
+  size = 2,
+  direction = "y",
+  box.padding = 0.3,
+  max.overlaps = Inf,
+  segment.size = 0.1,
+  segment.alpha = 0.5
+) +
+  geom_hline(
+    yintercept = 1,
+    linetype = 2,
+    colour = "grey50"
+  ) +
+  geom_vline(
+    xintercept = 0.5,
+    linetype = 2,
+    colour = "grey50"
+  ) +
+  labs(
+    x = "Posterior shrinkage",
+    y = "Prior-standardized posterior shift",
+    title = "%CV = 50%"
+  ) +
+  theme_bw()
+
+p_sens_1+p_sens_2+
+  plot_layout(guides = "collect") &
+  coord_cartesian(ylim = c(-0.5, 4.5), xlim=c(-0.5, 1.2))
+```
+# 1 comp vs 2 comp
+```{r one-two-comp}
+draws_post <- posterior::as_draws_matrix(
+  mod_to_plot2$draws(variables = pars)
+)
+
+draws_post_slopes <- as.data.frame(draws_post) %>%
+mutate(k12C = QCHat/V1CHat,
+k21C = QCHat/V2CHat,
+k10C = CLCHat/V1CHat,
+betaC = 0.5*(k12C+k21C+k10C-sqrt((k12C+k21C+k10C)^2-4*k21C*k10C)),
+alphaC = k21C*k10C/betaC,
+k12T = QTHat/V1THat,
+k21T = QCHat/V2CHat,
+k10T = CLTHat/V1THat,
+betaT = 0.5*(k12T+k21T+k10T-sqrt((k12T+k21T+k10T)^2-4*k21T*k10T)),
+alphaT = k21T*k10T/betaT) %>%
+  select(alphaC,betaC,alphaT,betaT) %>%
+  mutate(ratioC = alphaC/betaC,ratioT = alphaT/betaT )
+
+draws_post_slopes %>%
+  pivot_longer(
+    cols = c(ratioC, ratioT),
+    names_to = "Drug",
+    values_to = "Ratio"
+  ) %>%
+  ggplot(aes(x = Ratio, color = Drug, fill = Drug)) +
+  geom_density(alpha = 0.15, linewidth = 1.1) +
+  scale_color_manual(
+    values = c(ratioC = "#0072B2", ratioT = "#D55E00"),
+    labels = c(ratioC = "Ceftolozam", ratioT = "Tazobactam")
+  ) +
+  scale_fill_manual(
+    values = c(ratioC = "#0072B2", ratioT = "#D55E00"),
+    labels = c(ratioC = "Ceftolozam", ratioT = "Tazobactam")
+  ) +
+  labs(
+    x = "Alpha/beta ratio",
+    y = "Posterior density",
+    color = NULL,
+    fill = NULL
+  ) +
+  theme_classic(base_size = 13) +
+  theme(legend.position = "top")
+```
+
+## Session Info
+
+```{r sessioninfo}
+sessionInfo()
+```
