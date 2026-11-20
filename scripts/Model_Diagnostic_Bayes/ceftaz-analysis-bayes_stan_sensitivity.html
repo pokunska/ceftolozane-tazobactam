@@ -147,11 +147,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">status</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>A large number of files (2445 in total) have been discovered.
+<pre><code>A large number of files (2468 in total) have been discovered.
 It may take renv a long time to scan these files for dependencies.
 Consider using .renvignore to ignore irrelevant files.
 See `]8;;x-r-help:renv::dependencies?renv::dependencies]8;;` for more information.
 Set `options(renv.config.dependencies.limit = Inf)` to disable this warning.
+
+
+NOTE: Dependency discovery took 11 seconds during snapshot.
+Consider using .renvignore to ignore files, or switching to explicit snapshots.
+See `]8;;x-r-help:renv::dependencies?renv::dependencies]8;;` for more information.
+
+- C:/Users/pawel/Documents/Rprojects/pkpd-projects/ceftolozane-tazobactam/model/nonmem/bootstrap/bs   : 1003 files
+- C:/Users/pawel/Documents/Rprojects/pkpd-projects/ceftolozane-tazobactam/model/nonmem/bootstrap/bs102: 1003 files
 
 WARNING: One or more problems were discovered while enumerating dependencies.
 
@@ -1483,22 +1491,22 @@ attached base packages:
 [8] base     
 
 other attached packages:
- [1] posterior_1.7.0      conflicted_1.2.0     PKNCA_0.12.1        
- [4] MESS_0.6.0           simpar_0.1.1         rlang_1.1.7         
- [7] furrr_0.3.1          future_1.70.0        tidybayes_3.0.7.9000
-[10] loo_2.9.0            magick_2.9.1         yaml_2.3.12         
-[13] magrittr_2.0.4       cowplot_1.2.0        gridExtra_2.3       
-[16] cmdstanr_0.9.0.9000  nmrec_0.5.1          pmtables_0.10.1.9000
-[19] scales_1.4.0         here_1.0.2           whisker_0.4.1       
-[22] glue_1.8.0           stable_1.1.7         rmutil_1.1.10       
-[25] lubridate_1.9.5      forcats_1.0.1        stringr_1.6.0       
-[28] purrr_1.2.1          readr_2.2.0          tidyr_1.3.2         
-[31] tibble_3.3.1         tidyverse_2.0.0      data.table_1.18.2.1 
-[34] knitr_1.51           naniar_1.1.0         pmplots_0.5.2.9000  
-[37] vpc_1.2.4            mrggsave_0.4.7       mrgsolve_1.8.0.9000 
-[40] patchwork_1.3.2      ggplot2_4.0.2        dplyr_1.2.0         
-[43] bayesplot_1.15.0     bbr.bayes_0.4.0      bbr_1.15.0          
-[46] pracma_2.4.6        
+ [1] posterior_1.7.0      ggrepel_0.9.8        conflicted_1.2.0    
+ [4] PKNCA_0.12.1         MESS_0.6.0           simpar_0.1.1        
+ [7] rlang_1.1.7          furrr_0.3.1          future_1.70.0       
+[10] tidybayes_3.0.7.9000 loo_2.9.0            magick_2.9.1        
+[13] yaml_2.3.12          magrittr_2.0.4       cowplot_1.2.0       
+[16] gridExtra_2.3        cmdstanr_0.9.0.9000  nmrec_0.5.1         
+[19] pmtables_0.10.1.9000 scales_1.4.0         here_1.0.2          
+[22] whisker_0.4.1        glue_1.8.0           stable_1.1.7        
+[25] rmutil_1.1.10        lubridate_1.9.5      forcats_1.0.1       
+[28] stringr_1.6.0        purrr_1.2.1          readr_2.2.0         
+[31] tidyr_1.3.2          tibble_3.3.1         tidyverse_2.0.0     
+[34] data.table_1.18.2.1  knitr_1.51           naniar_1.1.0        
+[37] pmplots_0.5.2.9000   vpc_1.2.4            mrggsave_0.4.7      
+[40] mrgsolve_1.8.0.9000  patchwork_1.3.2      ggplot2_4.0.2       
+[43] dplyr_1.2.0          bayesplot_1.15.0     bbr.bayes_0.4.0     
+[46] bbr_1.15.0           pracma_2.4.6        
 
 loaded via a namespace (and not attached):
  [1] RColorBrewer_1.1-3      geeM_0.10.1             tensorA_0.36.2.1       
